@@ -1,0 +1,118 @@
+
+buff_jianshang.png
+size: 256,256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+images/jianshang/buff_00050
+  rotate: true
+  xy: 2, 4
+  size: 42, 41
+  orig: 46, 45
+  offset: 2, 1
+  index: -1
+images/jianshang/buff_00051
+  rotate: true
+  xy: 91, 6
+  size: 42, 41
+  orig: 46, 45
+  offset: 2, 1
+  index: -1
+images/jianshang/buff_00052
+  rotate: false
+  xy: 141, 8
+  size: 42, 42
+  orig: 46, 45
+  offset: 2, 1
+  index: -1
+images/jianshang/buff_00053
+  rotate: false
+  xy: 47, 6
+  size: 42, 42
+  orig: 46, 45
+  offset: 2, 1
+  index: -1
+images/jianshang/buff_00054
+  rotate: true
+  xy: 141, 52
+  size: 44, 42
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00055
+  rotate: false
+  xy: 97, 144
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00056
+  rotate: false
+  xy: 49, 50
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00057
+  rotate: true
+  xy: 2, 48
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00058
+  rotate: false
+  xy: 49, 95
+  size: 44, 44
+  orig: 46, 45
+  offset: 1, 0
+  index: -1
+images/jianshang/buff_00059
+  rotate: false
+  xy: 2, 142
+  size: 46, 45
+  orig: 46, 45
+  offset: 0, 0
+  index: -1
+images/jianshang/buff_00060
+  rotate: true
+  xy: 50, 141
+  size: 46, 45
+  orig: 46, 45
+  offset: 0, 0
+  index: -1
+images/jianshang/buff_00061
+  rotate: true
+  xy: 2, 94
+  size: 46, 45
+  orig: 46, 45
+  offset: 0, 0
+  index: -1
+images/jianshang/buff_00062
+  rotate: false
+  xy: 95, 95
+  size: 44, 44
+  orig: 46, 45
+  offset: 1, 0
+  index: -1
+images/jianshang/buff_00063
+  rotate: false
+  xy: 95, 50
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00064
+  rotate: true
+  xy: 141, 98
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1
+images/jianshang/buff_00065
+  rotate: false
+  xy: 143, 144
+  size: 44, 43
+  orig: 46, 45
+  offset: 1, 1
+  index: -1

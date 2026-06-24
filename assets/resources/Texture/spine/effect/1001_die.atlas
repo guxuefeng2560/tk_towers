@@ -1,0 +1,104 @@
+
+1001_die.png
+size: 722,845
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Rockets_00
+  rotate: false
+  xy: 478, 42
+  size: 132, 115
+  orig: 400, 300
+  offset: 119, 99
+  index: -1
+Rockets_01
+  rotate: false
+  xy: 499, 159
+  size: 207, 165
+  orig: 400, 300
+  offset: 92, 80
+  index: -1
+Rockets_02
+  rotate: false
+  xy: 249, 2
+  size: 227, 160
+  orig: 400, 300
+  offset: 85, 86
+  index: -1
+Rockets_03
+  rotate: false
+  xy: 252, 164
+  size: 245, 162
+  orig: 400, 300
+  offset: 81, 82
+  index: -1
+Rockets_04
+  rotate: false
+  xy: 2, 4
+  size: 245, 159
+  orig: 400, 300
+  offset: 80, 79
+  index: -1
+Rockets_05
+  rotate: false
+  xy: 2, 165
+  size: 248, 167
+  orig: 400, 300
+  offset: 79, 75
+  index: -1
+Rockets_06
+  rotate: true
+  xy: 548, 594
+  size: 249, 172
+  orig: 400, 300
+  offset: 79, 71
+  index: -1
+Rockets_07
+  rotate: false
+  xy: 262, 328
+  size: 253, 161
+  orig: 400, 300
+  offset: 78, 67
+  index: -1
+Rockets_08
+  rotate: false
+  xy: 2, 334
+  size: 258, 162
+  orig: 400, 300
+  offset: 76, 66
+  index: -1
+Rockets_09
+  rotate: false
+  xy: 2, 498
+  size: 261, 166
+  orig: 400, 300
+  offset: 75, 62
+  index: -1
+Rockets_10
+  rotate: true
+  xy: 546, 326
+  size: 266, 171
+  orig: 400, 300
+  offset: 73, 60
+  index: -1
+Rockets_11
+  rotate: false
+  xy: 275, 667
+  size: 271, 176
+  orig: 400, 300
+  offset: 71, 58
+  index: -1
+Rockets_12
+  rotate: false
+  xy: 2, 666
+  size: 271, 177
+  orig: 400, 300
+  offset: 72, 58
+  index: -1
+Rockets_13
+  rotate: false
+  xy: 275, 491
+  size: 269, 174
+  orig: 400, 300
+  offset: 74, 59
+  index: -1
