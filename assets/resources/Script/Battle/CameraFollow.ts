@@ -3,8 +3,6 @@ import { GamePhase } from "../Core/GameDefines";
 import GameRuntime from "../Core/GameRuntime";
 
 export default class CameraFollow {
-    private static readonly BG_REUSE_OFFSCREEN_PADDING = 500;
-
     private readonly runtime: GameRuntime;
 
     public constructor(runtime: GameRuntime) {
@@ -42,27 +40,6 @@ export default class CameraFollow {
     }
 
     private updateBackgroundLoop(): void {
-        const bgNodes = this.runtime.refs.bgNodes;
-        if (bgNodes.length === 0) {
-            return;
-        }
-
-        const visibleLeft = this.runtime.cameraTrackX - GameConfig.designWidth / 2;
-        for (let count = 0; count < bgNodes.length; count += 1) {
-            const leftMostIndex = this.runtime.bgOrderIndices[0];
-            const rightMostIndex = this.runtime.bgOrderIndices[this.runtime.bgOrderIndices.length - 1];
-            const leftMost = leftMostIndex === undefined ? null : bgNodes[leftMostIndex];
-            const rightMost = rightMostIndex === undefined ? null : bgNodes[rightMostIndex];
-            if (!leftMost || !rightMost) {
-                return;
-            }
-            const leftMostRightEdge = leftMost.x + this.runtime.bgWidth / 2;
-            if (leftMostRightEdge >= visibleLeft - CameraFollow.BG_REUSE_OFFSCREEN_PADDING) {
-                return;
-            }
-
-            leftMost.x = rightMost.x + this.runtime.bgWidth;
-            this.runtime.bgOrderIndices.push(this.runtime.bgOrderIndices.shift() as number);
-        }
+        this.runtime.syncBackgroundLoopToCamera();
     }
 }

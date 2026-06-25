@@ -1,6 +1,7 @@
 import GameFlowController from "./Core/GameFlowController";
 import GameRuntime from "./Core/GameRuntime";
 import { GamePhase } from "./Core/GameDefines";
+import { distance } from "./Util/MathUtil";
 import { SceneRefs } from "./Core/SceneRefs";
 
 const { ccclass, property } = cc._decorator;
@@ -279,6 +280,7 @@ export default class TowerDefenseScene extends cc.Component {
         }
         this.runtime.forcedAimDirection = direction;
         this.runtime.forcedAimTargetPosition = cc.v2(touchInWorld.x, touchInWorld.y);
+        this.runtime.forcedAimDistance = distance(firePosition, touchInWorld);
         this.updateShootLine(firePosition, touchInWorld);
     }
 
@@ -286,6 +288,7 @@ export default class TowerDefenseScene extends cc.Component {
         if (this.runtime) {
             this.runtime.forcedAimDirection = null;
             this.runtime.forcedAimTargetPosition = null;
+            this.runtime.forcedAimDistance = 0;
         }
         this.setShootLineVisible(false);
         this.activeAimTouchId = null;

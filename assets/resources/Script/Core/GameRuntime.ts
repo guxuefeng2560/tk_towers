@@ -8,6 +8,7 @@ import { BulletRuntime, EffectRuntime, MonsterKind, MonsterRuntime, RollerRuntim
 import { randomRange } from "../Util/MathUtil";
 
 export default class GameRuntime {
+    private static readonly BG_REUSE_OFFSCREEN_PADDING = 500;
     private static readonly BULLET_PREFAB_PATH = "prefab/bullet";
     private static readonly MONSTER_PREFAB_PATH = "prefab/monster";
     private static readonly CAR_PREFAB_PATH = "prefab/car";
@@ -46,6 +47,7 @@ export default class GameRuntime {
     public pendingFloatTextAnchor: cc.Node | null = null;
     public forcedAimDirection: cc.Vec2 | null = null;
     public forcedAimTargetPosition: cc.Vec2 | null = null;
+    public forcedAimDistance = 0;
 
     public monsterIdSeed = 1;
     public bossHp = GameConfig.boss.hp;
@@ -133,6 +135,7 @@ export default class GameRuntime {
         this.bossEntranceTargetCameraX = 0;
         this.forcedAimDirection = null;
         this.forcedAimTargetPosition = null;
+        this.forcedAimDistance = 0;
     }
 
     public resetActorPlacement(): void {
@@ -403,7 +406,7 @@ export default class GameRuntime {
     public spawnBulletCrater(x: number, y: number, angle: number = -18): void {
         const node = this.poolManager.get("bulletGroundArrow", this.effectRoot, () => {
             const arrowNode = new cc.Node("BulletGroundArrow");
-            arrowNode.setContentSize(5, 20);
+            arrowNode.setContentSize(10, 40);
             arrowNode.anchorX = 0.5;
             arrowNode.anchorY = 1;
             const sprite = arrowNode.addComponent(cc.Sprite);
@@ -428,7 +431,7 @@ export default class GameRuntime {
         if (sprite && this.bulletGroundSpriteFrame) {
             sprite.spriteFrame = this.bulletGroundSpriteFrame;
         }
-        node.setContentSize(5, 20);
+        node.setContentSize(10, 40);
         node.x = x;
         node.y = y - 5.5;
         node.opacity = 255;
@@ -793,6 +796,33 @@ export default class GameRuntime {
         const heroWorldPosition = this.getHeroWorldPosition();
         this.cameraTrackX = Math.max(0, heroWorldPosition.x - this.heroScreenAnchorX);
         this.worldRoot.x = -this.cameraTrackX;
+        this.syncBackgroundLoopToCamera();
+    }
+
+    public syncBackgroundLoopToCamera(): void {
+        const bgNodes = this.refs.bgNodes;
+        if (bgNodes.length === 0) {
+            return;
+        }
+
+        const visibleLeft = this.cameraTrackX - GameConfig.designWidth / 2;
+        for (let count = 0; count < bgNodes.length; count += 1) {
+            const leftMostIndex = this.bgOrderIndices[0];
+            const rightMostIndex = this.bgOrderIndices[this.bgOrderIndices.length - 1];
+            const leftMost = leftMostIndex === undefined ? null : bgNodes[leftMostIndex];
+            const rightMost = rightMostIndex === undefined ? null : bgNodes[rightMostIndex];
+            if (!leftMost || !rightMost) {
+                return;
+            }
+
+            const leftMostRightEdge = leftMost.x + this.bgWidth / 2;
+            if (leftMostRightEdge >= visibleLeft - GameRuntime.BG_REUSE_OFFSCREEN_PADDING) {
+                return;
+            }
+
+            leftMost.x = rightMost.x + this.bgWidth;
+            this.bgOrderIndices.push(this.bgOrderIndices.shift() as number);
+        }
     }
 
     private applyWorldAnchors(): void {

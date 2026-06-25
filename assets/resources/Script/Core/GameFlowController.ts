@@ -6,6 +6,8 @@ import { SkillType } from "../Entity/EntityTypes";
 import PrepareController, { PrepareAnswerResult } from "../Prepare/PrepareController";
 import QuestionController from "../Prepare/QuestionController";
 import BattleController from "../Battle/BattleController";
+import { BattleViewData } from "../UI/BattleView";
+import { ResultViewData } from "../UI/ResultView";
 import UIManager from "../UI/UIManager";
 
 export default class GameFlowController {
@@ -24,6 +26,8 @@ export default class GameFlowController {
     private prepareFlowToken = 0;
     private nextPrepareQuestionViewIndex = 0;
     private interRoundAdvanceRemaining = 0;
+    private lastBattleViewData: BattleViewData | null = null;
+    private lastResultViewData: ResultViewData | null = null;
     
     private battleQuestionIndexInRound = 0;
 
@@ -84,6 +88,8 @@ export default class GameFlowController {
         this.resetPrepareQuestionRotation();
         this.interRoundAdvanceRemaining = 0;
         this.battleQuestionIndexInRound = 0;
+        this.lastBattleViewData = null;
+        this.lastResultViewData = null;
         this.runtime.bossHp = GameConfig.boss.hp;
         this.runtime.resetActorPlacement();
         this.changePhase(GamePhase.Prepare);
@@ -391,16 +397,23 @@ export default class GameFlowController {
     }
 
     private refreshBattleAndResultUi(): void {
-        this.uiManager.renderBattle(this.battleController.getViewData());
+        const battleViewData = this.battleController.getViewData();
+        if (!this.isSameBattleViewData(this.lastBattleViewData, battleViewData)) {
+            this.uiManager.renderBattle(battleViewData);
+            this.lastBattleViewData = { ...battleViewData };
+        }
 
+        let resultViewData: ResultViewData | null = null;
         if (this.runtime.context.phase === GamePhase.Win || this.runtime.context.phase === GamePhase.Fail) {
-            this.uiManager.renderResult(this.getResultViewData());
-        } else {
-            this.uiManager.renderResult(null);
+            resultViewData = this.getResultViewData();
+        }
+        if (!this.isSameResultViewData(this.lastResultViewData, resultViewData)) {
+            this.uiManager.renderResult(resultViewData);
+            this.lastResultViewData = resultViewData ? { ...resultViewData } : null;
         }
     }
 
-    private getResultViewData(): { title: string; content: string; isWin: boolean } {
+    private getResultViewData(): ResultViewData {
         const roundDistance = Math.max(0, this.runtime.context.reachedDistance - this.runtime.context.roundStartDistance);
         if (this.runtime.context.phase === GamePhase.Win) {
             return {
@@ -432,6 +445,33 @@ export default class GameFlowController {
             ].join("\n"),
             isWin: false,
         };
+    }
+
+    private isSameBattleViewData(previous: BattleViewData | null, next: BattleViewData): boolean {
+        return !!previous
+            && previous.playerHp === next.playerHp
+            && previous.playerMaxHp === next.playerMaxHp
+            && previous.energy === next.energy
+            && previous.energyMax === next.energyMax
+            && previous.battleProgress === next.battleProgress
+            && previous.completedRounds === next.completedRounds
+            && previous.showBattleProgress === next.showBattleProgress
+            && previous.phase === next.phase
+            && previous.showBoss === next.showBoss
+            && previous.bossHp === next.bossHp
+            && previous.bossMaxHp === next.bossMaxHp
+            && previous.rollerSkillVisible === next.rollerSkillVisible
+            && previous.canUseRoller === next.canUseRoller
+            && previous.canUseBomb === next.canUseBomb;
+    }
+
+    private isSameResultViewData(previous: ResultViewData | null, next: ResultViewData | null): boolean {
+        if (!previous || !next) {
+            return previous === next;
+        }
+        return previous.title === next.title
+            && previous.content === next.content
+            && previous.isWin === next.isWin;
     }
 
     private calculateGrade(): string {

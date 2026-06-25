@@ -47,27 +47,40 @@ export default class ResultView extends cc.Component {
     }
 
     public setActive(active: boolean): void {
-        this.node.active = active;
+        if (this.node.active !== active) {
+            this.node.active = active;
+        }
     }
 
     public render(data: ResultViewData): void {
-        this.lastData = data;
+        const previous = this.lastData;
 
         if (this.resultLabel) {
-            this.resultLabel.string = data.content ? `${data.title}\n${data.content}` : data.title;
+            const resultText = data.content ? `${data.title}\n${data.content}` : data.title;
+            if (!previous || previous.title !== data.title || previous.content !== data.content) {
+                this.resultLabel.string = resultText;
+            }
         }
 
         if (this.continueLabelNode) {
-            this.continueLabelNode.active = data.isWin;
+            if (this.continueLabelNode.active !== data.isWin) {
+                this.continueLabelNode.active = data.isWin;
+            }
         }
 
         if (this.retryButtonNode) {
-            this.retryButtonNode.active = !data.isWin;
+            if (this.retryButtonNode.active === data.isWin) {
+                this.retryButtonNode.active = !data.isWin;
+            }
         }
 
         if (this.learnButtonNode) {
-            this.learnButtonNode.active = !data.isWin;
+            if (this.learnButtonNode.active === data.isWin) {
+                this.learnButtonNode.active = !data.isWin;
+            }
         }
+
+        this.lastData = { ...data };
     }
 
     public reapplyLastData(): void {
