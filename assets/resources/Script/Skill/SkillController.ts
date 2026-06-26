@@ -21,14 +21,15 @@ export default class SkillController {
     public updateCooldowns(dt: number): void {
         this.runtime.rollerCooldown = Math.max(0, this.runtime.rollerCooldown - dt);
         this.runtime.bombCooldown = Math.max(0, this.runtime.bombCooldown - dt);
+        this.runtime.rollerHiddenRemaining = Math.max(0, this.runtime.rollerHiddenRemaining - dt);
     }
 
     public tryUseSkill(skillType: SkillType, onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void): SkillAttemptResult {
         if (skillType === "roller") {
             if (!this.runtime.context.hasAliveCarSkillUnlocked()) {
-                return { kind: "invalid", reason: "需要锯齿车存活" };
+                return { kind: "invalid", reason: "roller_unavailable" };
             }
-            if (this.runtime.rollerCooldown > 0) {
+            if (this.runtime.rollerCooldown > 0 || this.runtime.rollerHiddenRemaining > 0) {
                 return { kind: "cooldown" };
             }
             if (this.runtime.context.energy < GameConfig.skill.roller.cost) {
@@ -42,7 +43,7 @@ export default class SkillController {
             return { kind: "cooldown" };
         }
         if (!this.hasBombTarget()) {
-            return { kind: "invalid", reason: "没有目标" };
+            return { kind: "invalid", reason: "bomb_no_target" };
         }
         if (this.runtime.context.energy < GameConfig.skill.bomb.cost) {
             return { kind: "needs_energy", skillType, cost: GameConfig.skill.bomb.cost };
@@ -53,7 +54,7 @@ export default class SkillController {
 
     public useSkillWithoutEnergyCost(skillType: SkillType, onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void): boolean {
         if (skillType === "roller") {
-            if (!this.runtime.context.hasAliveCarSkillUnlocked() || this.runtime.rollerCooldown > 0) {
+            if (!this.runtime.context.hasAliveCarSkillUnlocked() || this.runtime.rollerCooldown > 0 || this.runtime.rollerHiddenRemaining > 0) {
                 return false;
             }
             this.castRoller(false);
@@ -75,16 +76,10 @@ export default class SkillController {
                 continue;
             }
 
-            if (!roller.isRolling) {
-                roller.node.y = Math.max(roller.groundY, roller.node.y - GameConfig.skill.roller.speed * dt);
-                if (roller.node.y <= roller.groundY) {
-                    roller.node.y = roller.groundY;
-                    roller.isRolling = true;
-                }
-            } else {
-                roller.node.x += GameConfig.skill.roller.speed * dt;
-            }
-            roller.node.angle -= 720 * dt;
+            const sawPosition = this.runtime.getSawWorldPositionByIndex(roller.sourceCarIndex);
+            roller.node.x += GameConfig.skill.roller.speed * dt;
+            roller.node.y = sawPosition.y - 10;
+            // roller.node.angle -= 720 * dt;
 
             const rollerRect = this.runtime.makeRect(
                 roller.node.x,
@@ -222,42 +217,46 @@ export default class SkillController {
     }
 
     private castRoller(consumeEnergy: boolean = true): void {
+        const sourceCarIndices = this.runtime.context.getAliveCarIndices().filter((index) => this.runtime.context.getCarSkillUnlocked(index));
+        if (sourceCarIndices.length <= 0) {
+            return;
+        }
+
         if (consumeEnergy) {
             this.runtime.context.energy -= GameConfig.skill.roller.cost;
         }
         this.runtime.context.rollerUseCount += 1;
         this.runtime.rollerCooldown = GameConfig.skill.roller.cooldown;
+        this.runtime.rollerHiddenRemaining = GameConfig.skill.roller.hideDuration;
 
-        const node = this.runtime.poolManager.get("roller", this.runtime.effectRoot, () => {
-            const rollerNode = new cc.Node("Roller");
-            rollerNode.setContentSize(GameConfig.skill.roller.size, GameConfig.skill.roller.size);
-            const sprite = rollerNode.addComponent(cc.Sprite);
-            if (this.runtime.rollerSpriteFrame) {
+        for (const sourceCarIndex of sourceCarIndices) {
+            const node = this.runtime.poolManager.get("roller", this.runtime.effectRoot, () => {
+                const rollerNode = new cc.Node("Roller");
+                rollerNode.setContentSize(GameConfig.skill.roller.size, GameConfig.skill.roller.size);
+                const sprite = rollerNode.addComponent(cc.Sprite);
+                if (this.runtime.rollerSpriteFrame) {
+                    sprite.spriteFrame = this.runtime.rollerSpriteFrame;
+                }
+                return rollerNode;
+            });
+
+            const sprite = node.getComponent(cc.Sprite);
+            if (sprite && this.runtime.rollerSpriteFrame) {
                 sprite.spriteFrame = this.runtime.rollerSpriteFrame;
             }
-            return rollerNode;
-        });
+            const sawPosition = this.runtime.getSawWorldPositionByIndex(sourceCarIndex);
+            node.x = sawPosition.x + 48;
+            node.y = sawPosition.y - 10;
+            node.angle = 0;
+            node.opacity = 255;
+            node.scale = 1;
 
-        const sprite = node.getComponent(cc.Sprite);
-        if (sprite && this.runtime.rollerSpriteFrame) {
-            sprite.spriteFrame = this.runtime.rollerSpriteFrame;
+            this.runtime.rollers.push({
+                node,
+                hitMonsterIds: {},
+                sourceCarIndex,
+            });
         }
-        const sourceCarIndex = this.runtime.context.getLowestAliveCarIndexWithSkill();
-        const sawPosition = sourceCarIndex >= 0
-            ? this.runtime.getSawWorldPositionByIndex(sourceCarIndex)
-            : this.runtime.getSawWorldPosition();
-        node.x = sawPosition.x + 48;
-        node.y = sawPosition.y - 10;
-        node.angle = 0;
-        node.opacity = 255;
-        node.scale = 1;
-
-        this.runtime.rollers.push({
-            node,
-            hitMonsterIds: {},
-            isRolling: false,
-            groundY: GameConfig.world.monsterY-30,
-        });
     }
 
     private castBomb(onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void, consumeEnergy: boolean = true): void {

@@ -1,8 +1,11 @@
 export interface SceneRefs {
     root: cc.Node;
+    farMapLayout: cc.Node | null;
     nodeCamera: cc.Node | null;
     bgNodes: cc.Node[];
     heroNode: cc.Node | null;
+    flagNode: cc.Node | null;
+    sanNode: cc.Node | null;
     heroSpineNode: cc.Node | null;
     shootLineNode: cc.Node | null;
     carBaseNode: cc.Node | null;
@@ -10,6 +13,7 @@ export interface SceneRefs {
     wheelNodes: cc.Node[];
     heroProgressBar: cc.ProgressBar | null;
     bossNode: cc.Node | null;
+    bossVariantNodes: cc.Node[];
     monsterRoot: cc.Node | null;
     bossProgressBar: cc.ProgressBar | null;
     bossHpLabel: cc.Label | null;
@@ -32,7 +36,6 @@ export interface SceneRefs {
     labelPower: cc.Label | null;
     nodeBattleProgress: cc.Node | null;
     battleBar: cc.ProgressBar | null;
-    bossIconNodes: cc.Node[];
     imgEnergyProgress: cc.ProgressBar | null;
     labelEnergy: cc.Label | null;
     labelBombCost: cc.Label | null;

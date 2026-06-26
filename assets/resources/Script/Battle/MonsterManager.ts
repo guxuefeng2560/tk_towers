@@ -6,6 +6,16 @@ import { clamp, randomRange, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
 
+type MonsterFrameCaches = {
+    monsterById: Record<number, MonsterRuntime>;
+    stackedChildrenCountById: Record<number, number>;
+    laneMonsters: MonsterRuntime[][];
+    groundLaneMonsters: MonsterRuntime[][];
+    elevatedLaneMonsters: MonsterRuntime[][];
+    stackLaneMonsters: MonsterRuntime[][];
+    stackDepthById: Record<number, number>;
+};
+
 /**
  * 怪物管理器回调接口
  * 由 BattleController 实现，用于解耦怪物与车辆/英雄的交互
@@ -33,7 +43,7 @@ export interface MonsterManagerCallbacks {
  */
 export default class MonsterManager {
     // ===== 怪物车道与间距 =====
-    private static readonly MONSTER_LANE_OFFSETS = [-20, 0, 20];
+    private static readonly MONSTER_LANE_OFFSETS = [-10, 0, 10];
     private static readonly MONSTER_LANE_MIN_SPACING = 30;
     private static readonly MONSTER_CAR_CONTACT_SHRINK = 10;
 
@@ -109,8 +119,10 @@ export default class MonsterManager {
      */
     public updateMonsters(dt: number): void {
         const carRect = this.callbacks.getCarRect();
+        const heroRect = this.callbacks.getHeroRect();
         const contactCarFrontX = carRect.x + carRect.width / 2 - MonsterManager.MONSTER_CAR_CONTACT_SHRINK;
         const previousXById: Record<number, number> = {};
+        const preUpdateCaches = this.buildMonsterFrameCaches();
 
         for (let index = this.runtime.monsters.length - 1; index >= 0; index -= 1) {
             const monster = this.runtime.monsters[index];
@@ -131,7 +143,7 @@ export default class MonsterManager {
             monster.contactCarIndex = -1;
             monster.contactHero = false;
             const laneY = this.getMonsterLaneY(monster.laneIndex);
-            const supportMonster = this.getSupportedMonster(monster);
+            const supportMonster = this.getSupportedMonster(monster, preUpdateCaches.monsterById);
 
             if (monster.stackedOnMonsterId > 0 && !supportMonster) {
                 monster.stackedOnMonsterId = 0;
@@ -154,7 +166,6 @@ export default class MonsterManager {
             }
 
             const monsterRect = this.runtime.getNodeColliderRect(monster.node, GameConfig.monster.width, GameConfig.monster.height);
-            const heroRect = this.callbacks.getHeroRect();
             const heroContactFrontX = heroRect.x + heroRect.width / 2 - MonsterManager.MONSTER_CAR_CONTACT_SHRINK;
             const reachesHeroFront = monster.node.x - GameConfig.monster.width / 2 <= heroContactFrontX;
             const carContact = this.callbacks.getContactCarHit(monsterRect, monster.node.y + monster.node.parent.y);
@@ -192,8 +203,10 @@ export default class MonsterManager {
             }
         }
 
-        this.resolveMonsterLaneSpacing(contactCarFrontX, previousXById);
-        this.resolveMonsterVerticalStacking(dt);
+        const postUpdateCaches = this.buildMonsterFrameCaches();
+        this.resolveMonsterLaneSpacing(contactCarFrontX, previousXById, postUpdateCaches);
+        const postSpacingCaches = this.buildMonsterFrameCaches();
+        this.resolveMonsterVerticalStacking(dt, postSpacingCaches);
     }
 
     /**
@@ -418,18 +431,28 @@ export default class MonsterManager {
     }
 
     private getAliveMonsterCount(): number {
-        return this.runtime.monsters.filter((monster) => cc.isValid(monster.node) && !monster.dying).length;
+        let count = 0;
+        for (const monster of this.runtime.monsters) {
+            if (cc.isValid(monster.node) && !monster.dying) {
+                count += 1;
+            }
+        }
+        return count;
     }
 
     private getBossVisibleAreaMonsterCount(): number {
         const spawnAreaLeft = this.runtime.cameraTrackX - 40;
         const spawnAreaRight = this.runtime.cameraTrackX + GameConfig.designWidth / 2 + 140;
-        return this.runtime.monsters.filter((monster) => {
+        let count = 0;
+        for (const monster of this.runtime.monsters) {
             if (!cc.isValid(monster.node) || monster.dying) {
-                return false;
+                continue;
             }
-            return monster.node.x >= spawnAreaLeft && monster.node.x <= spawnAreaRight;
-        }).length;
+            if (monster.node.x >= spawnAreaLeft && monster.node.x <= spawnAreaRight) {
+                count += 1;
+            }
+        }
+        return count;
     }
 
     // ==================== 车道 ====================
@@ -459,14 +482,9 @@ export default class MonsterManager {
 
     // ==================== 车道间距与堆叠 ====================
 
-    private resolveMonsterLaneSpacing(carFrontX: number, previousXById: Record<number, number>): void {
+    private resolveMonsterLaneSpacing(carFrontX: number, previousXById: Record<number, number>, caches: MonsterFrameCaches): void {
         for (let laneIndex = 0; laneIndex < MonsterManager.MONSTER_LANE_OFFSETS.length; laneIndex += 1) {
-            const laneMonsters = this.runtime.monsters
-                .filter((monster) => cc.isValid(monster.node)
-                    && !monster.dying
-                    && monster.laneIndex === laneIndex
-                    && !this.isMonsterElevated(monster))
-                .sort((left, right) => left.node.x - right.node.x);
+            const laneMonsters = caches.groundLaneMonsters[laneIndex];
 
             let nextMinX = carFrontX + GameConfig.monster.width / 2;
             let previousGroundMonster: MonsterRuntime | null = null;
@@ -481,7 +499,7 @@ export default class MonsterManager {
                     const canJump = previousGroundMonster
                         && monster.blockedByMonsterLastFrame
                         && horizontalDisplacement >= 0
-                        && !this.hasMonsterOnTop(monster)
+                        && !this.hasMonsterOnTop(monster, caches.stackedChildrenCountById)
                         && !monster.hasStackJumped
                         && Math.random() < MonsterManager.MONSTER_STACK_JUMP_CHANCE
                         && !monster.contactCar
@@ -504,16 +522,11 @@ export default class MonsterManager {
         }
     }
 
-    private resolveMonsterVerticalStacking(dt: number): void {
+    private resolveMonsterVerticalStacking(dt: number, caches: MonsterFrameCaches): void {
         for (let laneIndex = 0; laneIndex < MonsterManager.MONSTER_LANE_OFFSETS.length; laneIndex += 1) {
-            const laneMonsters = this.runtime.monsters
-                .filter((monster) => cc.isValid(monster.node) && !monster.dying && monster.laneIndex === laneIndex);
-
-            const stackMonsters = laneMonsters
-                .filter((monster) => monster.stackedOnMonsterId > 0)
-                .sort((left, right) => this.getMonsterStackDepth(left) - this.getMonsterStackDepth(right));
+            const stackMonsters = caches.stackLaneMonsters[laneIndex];
             stackMonsters.forEach((monster) => {
-                const supportMonster = this.getSupportedMonster(monster);
+                const supportMonster = this.getSupportedMonster(monster, caches.monsterById);
                 if (!supportMonster) {
                     monster.stackedOnMonsterId = 0;
                     monster.stackJumpProgress = 1;
@@ -537,11 +550,7 @@ export default class MonsterManager {
                 }
             });
 
-            const elevatedMonsters = laneMonsters
-                .filter((monster) => this.isMonsterElevated(monster))
-                .sort((left, right) => {
-                    return left.node.x - right.node.x;
-                });
+            const elevatedMonsters = caches.elevatedLaneMonsters[laneIndex];
 
             let previousElevatedMonster: MonsterRuntime | null = null;
             elevatedMonsters.forEach((monster) => {
@@ -570,33 +579,47 @@ export default class MonsterManager {
         monster.stackJumpStartY = monster.node.y;
     }
 
-    private getSupportedMonster(monster: Pick<MonsterRuntime, "id" | "laneIndex" | "stackedOnMonsterId">): MonsterRuntime | null {
+    private getSupportedMonster(
+        monster: Pick<MonsterRuntime, "id" | "laneIndex" | "stackedOnMonsterId">,
+        monsterById: Record<number, MonsterRuntime>,
+    ): MonsterRuntime | null {
         if (!monster.stackedOnMonsterId) {
             return null;
         }
-        return this.runtime.monsters.find((candidate) => candidate.id === monster.stackedOnMonsterId
-            && candidate.laneIndex === monster.laneIndex
-            && cc.isValid(candidate.node)
-            && !candidate.dying) || null;
+        const supportMonster = monsterById[monster.stackedOnMonsterId];
+        if (!supportMonster || supportMonster.laneIndex !== monster.laneIndex || !cc.isValid(supportMonster.node) || supportMonster.dying) {
+            return null;
+        }
+        return supportMonster;
     }
 
-    private hasMonsterOnTop(monster: Pick<MonsterRuntime, "id" | "laneIndex">): boolean {
-        return this.runtime.monsters.some((candidate) => candidate.stackedOnMonsterId === monster.id
-            && candidate.laneIndex === monster.laneIndex
-            && cc.isValid(candidate.node)
-            && !candidate.dying);
+    private hasMonsterOnTop(
+        monster: Pick<MonsterRuntime, "id" | "laneIndex">,
+        stackedChildrenCountById: Record<number, number>,
+    ): boolean {
+        return (stackedChildrenCountById[monster.id] || 0) > 0;
     }
 
-    private getMonsterStackDepth(monster: Pick<MonsterRuntime, "id" | "laneIndex" | "stackedOnMonsterId">, visited: Record<number, boolean> = {}): number {
+    private getMonsterStackDepth(
+        monster: Pick<MonsterRuntime, "id" | "laneIndex" | "stackedOnMonsterId">,
+        monsterById: Record<number, MonsterRuntime>,
+        cache: Record<number, number>,
+        visited: Record<number, boolean> = {},
+    ): number {
+        if (cache[monster.id] !== undefined) {
+            return cache[monster.id];
+        }
         if (!monster.stackedOnMonsterId || visited[monster.id]) {
             return 0;
         }
         visited[monster.id] = true;
-        const supportMonster = this.getSupportedMonster(monster);
+        const supportMonster = this.getSupportedMonster(monster, monsterById);
         if (!supportMonster) {
             return 0;
         }
-        return this.getMonsterStackDepth(supportMonster, visited) + 1;
+        const depth = this.getMonsterStackDepth(supportMonster, monsterById, cache, visited) + 1;
+        cache[monster.id] = depth;
+        return depth;
     }
 
     private isMonsterElevated(monster: Pick<MonsterRuntime, "laneIndex" | "node" | "stackedOnMonsterId">): boolean {
@@ -629,5 +652,65 @@ export default class MonsterManager {
 
     private rollBossMonsterKind(): MonsterKind {
         return Math.random() < GameConfig.monster.bossPreSpawnNormalRatio ? "normal" : "elite";
+    }
+
+    private buildMonsterFrameCaches(): MonsterFrameCaches {
+        const laneCount = MonsterManager.MONSTER_LANE_OFFSETS.length;
+        const laneMonsters = Array.from({ length: laneCount }, () => [] as MonsterRuntime[]);
+        const groundLaneMonsters = Array.from({ length: laneCount }, () => [] as MonsterRuntime[]);
+        const elevatedLaneMonsters = Array.from({ length: laneCount }, () => [] as MonsterRuntime[]);
+        const stackLaneMonsters = Array.from({ length: laneCount }, () => [] as MonsterRuntime[]);
+        const monsterById: Record<number, MonsterRuntime> = {};
+        const stackedChildrenCountById: Record<number, number> = {};
+        const stackDepthById: Record<number, number> = {};
+        const activeMonsters: MonsterRuntime[] = [];
+
+        for (const monster of this.runtime.monsters) {
+            if (!cc.isValid(monster.node) || monster.dying) {
+                continue;
+            }
+            monsterById[monster.id] = monster;
+            activeMonsters.push(monster);
+            if (monster.stackedOnMonsterId > 0) {
+                stackedChildrenCountById[monster.stackedOnMonsterId] = (stackedChildrenCountById[monster.stackedOnMonsterId] || 0) + 1;
+            }
+        }
+
+        for (const monster of activeMonsters) {
+            const laneIndex = monster.laneIndex;
+            if (laneIndex < 0 || laneIndex >= laneCount) {
+                continue;
+            }
+            laneMonsters[laneIndex].push(monster);
+            if (this.isMonsterElevated(monster)) {
+                elevatedLaneMonsters[laneIndex].push(monster);
+            } else {
+                groundLaneMonsters[laneIndex].push(monster);
+            }
+            if (monster.stackedOnMonsterId > 0) {
+                stackLaneMonsters[laneIndex].push(monster);
+            }
+        }
+
+        for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
+            laneMonsters[laneIndex].sort((left, right) => left.node.x - right.node.x);
+            groundLaneMonsters[laneIndex].sort((left, right) => left.node.x - right.node.x);
+            elevatedLaneMonsters[laneIndex].sort((left, right) => left.node.x - right.node.x);
+            stackLaneMonsters[laneIndex].sort((left, right) => {
+                const leftDepth = this.getMonsterStackDepth(left, monsterById, stackDepthById);
+                const rightDepth = this.getMonsterStackDepth(right, monsterById, stackDepthById);
+                return leftDepth - rightDepth;
+            });
+        }
+
+        return {
+            monsterById,
+            stackedChildrenCountById,
+            laneMonsters,
+            groundLaneMonsters,
+            elevatedLaneMonsters,
+            stackLaneMonsters,
+            stackDepthById,
+        };
     }
 }

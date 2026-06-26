@@ -105,7 +105,7 @@ export default class PrepareView {
             this.refs.powerBar.progress = Math.max(0, Math.min(1, data.powerPercent / 100));
         }
         if (this.refs.labelPower) {
-            this.refs.labelPower.string = `\u6218\u529b\u503c\uff1a${this.formatPercent(this.resolveCurrentPowerPercent(data))}`;
+            this.refs.labelPower.string = `${this.formatPercent(this.resolveCurrentPowerPercent(data))}`;
         }
         if (this.refs.labelHurt) {
             this.refs.labelHurt.string = data.hurtValueText;
@@ -202,13 +202,13 @@ export default class PrepareView {
         }
 
         node.active = this.active && task.visible;
-        node.opacity = task.visible ? 255 : (task.completed ? 220 : 180);
-        node.color = task.current
-            ? new cc.Color(255, 245, 190, 255)
-            : (task.completed ? new cc.Color(210, 255, 210, 255) : cc.Color.WHITE);
+        // node.opacity = task.visible ? 255 : (task.completed ? 220 : 180);
+        // node.color = task.current
+        //     ? new cc.Color(255, 245, 190, 255)
+        //     : (task.completed ? new cc.Color(210, 255, 210, 255) : cc.Color.WHITE);
 
         if (label && (task.key === PrepareTaskKey.BuyCar || task.key === PrepareTaskKey.UnlockSkill || task.key === PrepareTaskKey.UnlockDef)) {
-            label.string = this.buildTaskText(task);
+            // label.string = this.buildTaskText(task);
         }
 
         if (task.key === PrepareTaskKey.Hurt) {

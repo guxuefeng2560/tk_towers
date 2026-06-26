@@ -3,6 +3,10 @@ import GameRuntime from "./Core/GameRuntime";
 import { GamePhase } from "./Core/GameDefines";
 import { distance } from "./Util/MathUtil";
 import { SceneRefs } from "./Core/SceneRefs";
+import { AudioID } from "./global/TD_Constants";
+import AudioManager from "./Framework/audio/TD_AudioManager";
+import ResModuleManager from "./Framework/moduleManager/TD_ResModuleManager";
+import Global from "./global/TD_Global";
 
 const { ccclass, property } = cc._decorator;
 
@@ -12,11 +16,20 @@ export default class TowerDefenseScene extends cc.Component {
     @property(cc.Node)
     NodeCamera: cc.Node = null;
 
+    @property(cc.Node)
+    NodeFarMap: cc.Node = null;
+
     @property([cc.Node])
     NodeBgArr: cc.Node[] = [];
 
     @property(cc.Node)
     NodeHero: cc.Node = null;
+
+    @property(cc.Node)
+    NodeFlag: cc.Node = null;
+
+    @property(cc.Node)
+    NodeSan: cc.Node = null;
 
     @property(cc.Node)
     SpineHero: cc.Node = null;
@@ -142,9 +155,6 @@ export default class TowerDefenseScene extends cc.Component {
     @property([cc.Node])
     NodeBossVec: cc.Node[] = [];
 
-    /** boss的节点icon（包括巢穴） */
-    @property([cc.Node])
-    NodeBossIconVec: cc.Node[] = [];
 
     private runtime: GameRuntime = null;
     private flowController: GameFlowController = null;
@@ -155,9 +165,12 @@ export default class TowerDefenseScene extends cc.Component {
         );
         const refs: SceneRefs = {
             root: this.node,
+            farMapLayout: this.NodeFarMap,
             nodeCamera: this.NodeCamera,
             bgNodes: this.NodeBgArr,
             heroNode: this.NodeHero,
+            flagNode: this.NodeFlag,
+            sanNode: this.NodeSan,
             heroSpineNode: this.SpineHero,
             shootLineNode: this.NodeShootLine,
             carBaseNode: this.NodeCar0,
@@ -165,6 +178,7 @@ export default class TowerDefenseScene extends cc.Component {
             wheelNodes: this.NodeSweelArr,
             heroProgressBar: this.ProgressHeroBar,
             bossNode: this.NodeBoss,
+            bossVariantNodes: this.NodeBossVec,
             monsterRoot: this.NodeMonster,
             bossProgressBar: this.ProgressBossBar,
             bossHpLabel: this.LabelBossHp,
@@ -187,7 +201,7 @@ export default class TowerDefenseScene extends cc.Component {
             labelPower: this.LabelPower,
             nodeBattleProgress: this.NodeBattleProgress,
             battleBar: this.BattleBar,
-            bossIconNodes: this.NodeBossIconVec,
+            // bossIconNodes: this.NodeBossIconVec,
             imgEnergyProgress: this.ImgEnegyProgress,
             labelEnergy: this.LabelEnegy,
             labelBombCost: this.LabelBombCost,
@@ -202,6 +216,12 @@ export default class TowerDefenseScene extends cc.Component {
         this.flowController = new GameFlowController(this.runtime, this);
         this.flowController.initialize();
         this.registerTouchEvents();
+
+        ResModuleManager.init(Global.game_id, Global.game_id);
+        AudioManager.getInstance();
+        this.scheduleOnce(function() {
+            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BATTLE);
+        }, 1.0)
     }
 
     protected update(dt: number): void {

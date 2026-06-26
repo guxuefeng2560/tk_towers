@@ -2,7 +2,7 @@ import { QuestionMode } from "./GameDefines";
 
 const BULLET_ANGLE_OFFSET_DEG = 0;
 const PLAYER_ATTACK_RANGE = 600;
-const MONSTER_LANE_Y = 10;
+const MONSTER_LANE_Y = -100;
 
 export const GameConfig = {
     designWidth: 1280,
@@ -21,7 +21,7 @@ export const GameConfig = {
 
     player: {
         maxHp: 1800,
-        baseAttack: 35,
+        baseAttack: 350,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,
@@ -90,7 +90,8 @@ export const GameConfig = {
         roller: {
             cost: 4,
             cooldown: 0.5,
-            speed: 600,
+            hideDuration: 2,
+            speed: 1000,
             damage: 600,
             size: 56,
         },
@@ -108,9 +109,9 @@ export const GameConfig = {
         groundY: -220,
         carY: -180,
         sawCarY: -230,
-        heroY: -110,
+        heroY: -144,
         monsterY: MONSTER_LANE_Y,
-        bossY: 0,
+        bossY: -154,
     },
 
     battleQuestion: {

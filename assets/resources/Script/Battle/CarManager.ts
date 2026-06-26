@@ -90,7 +90,7 @@ export default class CarManager {
 
         const contactCount = this.runtime.monsters.filter((monster) => monster.contactCar).length;
         const speedFactor = 1 - GameConfig.monster.slowFactorPerMonster * contactCount;
-        const searchSpeedMultiplier = this.hasAttackableTargetInRange() ? 1 : CarManager.SEARCH_MOVE_SPEED_MULTIPLIER;
+        const searchSpeedMultiplier = 1;//this.hasAttackableTargetInRange() ? 1 : CarManager.SEARCH_MOVE_SPEED_MULTIPLIER;
         return Math.max(0, GameConfig.car.baseSpeed * speedFactor * searchSpeedMultiplier);
     }
 
@@ -268,20 +268,11 @@ export default class CarManager {
             const sawNode = carView.sawNode;
             const sawVisible = carView.node.active
                 && carIndex >= 0
-                && this.runtime.context.getCarSkillUnlocked(carIndex);
+                && this.runtime.isRollerSkillVisualReady(carIndex);
             sawNode.active = sawVisible;
-            if (sawVisible) {
-                const sawNodeAny = sawNode as any;
-                if (!sawNodeAny.__spinStarted) {
-                    sawNodeAny.__spinStarted = true;
-                    sawNode.runAction(
-                        cc.repeatForever(cc.rotateBy(1, this.runtime.sawRotationSpeed)),
-                    );
-                }
-            } else {
-                sawNode.stopAllActions();
-                (sawNode as any).__spinStarted = false;
-            }
+            sawNode.stopAllActions();
+            sawNode.angle = 0;
+            (sawNode as any).__spinStarted = false;
         });
     }
 }

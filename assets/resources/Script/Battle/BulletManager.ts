@@ -205,7 +205,7 @@ export default class BulletManager {
             bullet.node.y += bullet.velocity.y * dt;
             bullet.node.angle = -Math.atan2(bullet.velocity.x, bullet.velocity.y) * 180 / Math.PI + GameConfig.player.bulletAngleOffset;
 
-            if (bullet.node.y < -40) {
+            if (bullet.node.y <  GameConfig.monster.laneY -20) {
                 if (bullet.pendingCraterDelay === undefined) {
                     bullet.pendingCraterDelay = randomRange(0.01, 0.05);
                 } else {
@@ -242,7 +242,11 @@ export default class BulletManager {
      */
     private findBulletHitTarget(bulletNode: cc.Node, bossOnly: boolean = false): { type: "none" | "monster" | "boss"; monsterId: number } {
         const bulletRect = this.runtime.makeRect(bulletNode.x, bulletNode.y, 22, 10);
-        const hits: Array<{ type: "monster" | "boss"; monsterId: number; distance: number }> = [];
+        let bestHitType: "none" | "monster" | "boss" = "none";
+        let bestHitMonsterId = 0;
+        let bestHitDistance = Number.MAX_SAFE_INTEGER;
+        const bulletX = bulletNode.x;
+        const bulletY = bulletNode.y;
 
         if (!bossOnly) {
             for (const monster of this.runtime.monsters) {
@@ -250,11 +254,12 @@ export default class BulletManager {
                     continue;
                 }
                 if (rectIntersects(bulletRect, this.runtime.getNodeColliderRect(monster.node, GameConfig.monster.width, GameConfig.monster.height))) {
-                    hits.push({
-                        type: "monster",
-                        monsterId: monster.id,
-                        distance: distance(cc.v2(bulletNode.x, bulletNode.y), cc.v2(monster.node.x, monster.node.y)),
-                    });
+                    const hitDistance = distance(cc.v2(bulletX, bulletY), cc.v2(monster.node.x, monster.node.y));
+                    if (hitDistance < bestHitDistance) {
+                        bestHitType = "monster";
+                        bestHitMonsterId = monster.id;
+                        bestHitDistance = hitDistance;
+                    }
                 }
             }
         }
@@ -262,20 +267,19 @@ export default class BulletManager {
         if (this.runtime.context.phase === GamePhase.Boss && this.runtime.refs.bossNode && this.runtime.refs.bossNode.active) {
             const bossCenter = this.runtime.getBossCenterWorldPosition();
             if (rectIntersects(bulletRect, this.runtime.makeRect(bossCenter.x, bossCenter.y, GameConfig.boss.width, GameConfig.boss.height))) {
-                hits.push({
-                    type: "boss",
-                    monsterId: 0,
-                    distance: distance(cc.v2(bulletNode.x, bulletNode.y), bossCenter),
-                });
+                const hitDistance = distance(cc.v2(bulletX, bulletY), bossCenter);
+                if (hitDistance < bestHitDistance) {
+                    bestHitType = "boss";
+                    bestHitMonsterId = 0;
+                    bestHitDistance = hitDistance;
+                }
             }
         }
 
-        if (hits.length === 0) {
-            return { type: "none", monsterId: 0 };
+        if (bestHitType === "none") {
+            return { type: bestHitType, monsterId: bestHitMonsterId };
         }
-
-        hits.sort((left, right) => left.distance - right.distance);
-        return { type: hits[0].type, monsterId: hits[0].monsterId };
+        return { type: bestHitType, monsterId: bestHitMonsterId };
     }
 
     /**

@@ -50,8 +50,7 @@ export interface BulletRuntime {
 export interface RollerRuntime {
     node: cc.Node;
     hitMonsterIds: Record<number, boolean>;
-    isRolling: boolean;
-    groundY: number;
+    sourceCarIndex: number;
 }
 
 export interface EffectRuntime {

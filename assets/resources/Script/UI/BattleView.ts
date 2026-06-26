@@ -153,8 +153,8 @@ export default class BattleView {
         const sawSkillVisible = data.rollerSkillVisible;
         const rollerEnergyEnough = data.energy >= GameConfig.skill.roller.cost;
         const showSkillSwitch = data.phase !== GamePhase.QuestionPause;
-        this.setCostVisibleIfChanged(this.refs.labelBombCost, showSkillSwitch && bombEnergyEnough);
-        this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSkillSwitch && sawSkillVisible && rollerEnergyEnough);
+        // this.setCostVisibleIfChanged(this.refs.labelBombCost, showSkillSwitch && bombEnergyEnough);
+        // this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSkillSwitch && sawSkillVisible && rollerEnergyEnough);
         this.setNodeGroupActiveIfChanged(this.answer1Button, showSkillSwitch && !bombEnergyEnough);
         this.setNodeGroupActiveIfChanged(this.answer2Button, showSkillSwitch && sawSkillVisible && !rollerEnergyEnough);
 
