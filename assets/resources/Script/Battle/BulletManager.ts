@@ -73,8 +73,11 @@ export default class BulletManager {
                 baseDirection = baseDirection.normalize();
             }
         }
+        if (baseDirection.x <= 0) {
+            return;
+        }
 
-        this.runtime.playHeroAttack();
+        this.runtime.playHeroAttack(baseDirection);
         const bulletSpeed = manualAiming
             ? this.getManualBulletSpeed(this.runtime.forcedAimDistance, firePosition, manualAimTargetPosition)
             : GameConfig.player.bulletSpeed;
@@ -85,7 +88,13 @@ export default class BulletManager {
             const shotBaseDirection = useBossOnlyBullet
                 ? this.getDirectionToTarget(firePosition, bossTarget)
                 : baseDirection;
+            if (shotBaseDirection.x <= 0) {
+                continue;
+            }
             const direction = rotateVector(shotBaseDirection, randomRange(-GameConfig.player.bulletRandomAngle, GameConfig.player.bulletRandomAngle));
+            if (direction.x <= 0) {
+                continue;
+            }
             const delay = randomRange(0, GameConfig.player.bulletRandomDelayMax);
             this.spawnBullet(firePosition, direction, delay, useBossOnlyBullet, manualAiming ? 1 : 0.5, bulletSpeed);
         }

@@ -11,6 +11,7 @@ import ResultView from "./ResultView";
 interface UIManagerCallbacks {
     onStartBattle: () => void;
     onSkipPrepare: () => void;
+    onSpeedUp: () => void;
     onRoller: () => void;
     onBomb: () => void;
     onQuestionOption: (index: number) => void;
@@ -35,8 +36,13 @@ export default class UIManager {
         this.root = root;
         this.host = target instanceof cc.Component ? target : null;
 
-        this.prepareView = new PrepareView(refs, target, callbacks.onStartBattle, callbacks.onSkipPrepare);
-        this.battleView = new BattleView(refs, target, callbacks.onRoller, callbacks.onBomb);
+        this.prepareView = new PrepareView(
+            refs,
+            target,
+            callbacks.onStartBattle,
+            callbacks.onSkipPrepare,
+        );
+        this.battleView = new BattleView(refs, target, callbacks.onRoller, callbacks.onBomb, callbacks.onSpeedUp);
         this.loadQuestionView(callbacks.onQuestionOption);
         this.loadResultView(callbacks.onRetryPrepare, callbacks.onCloseWinResult);
     }
@@ -243,4 +249,3 @@ interface QuestionViewConfig {
     path: string;
     componentName: string;
 }
-

@@ -1,5 +1,5 @@
 import { OrderingQuestionData, QuestionOption } from "../Core/GameDefines";
-import { playResultStamp, QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
+import { QUESTION_RESULT_DELAY } from "./QuestionResultStamp";
 
 const { ccclass, property } = cc._decorator;
 
@@ -28,14 +28,21 @@ interface TokenBinding {
 /** 排序 */
 @ccclass
 export default class QuestionView4 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 200;
+    private static readonly DISPLAY_OFFSET_X = 360;
+    private static readonly DISPLAY_OFFSET_Y = 60;
     private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
     private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
     private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
-    private static readonly OPTION_SPACING_X = 50;
+    private static readonly STATE_RIGHT_PATH = "Texture/questionUI/right";
+    private static readonly STATE_WRONG_PATH = "Texture/questionUI/wrong";
+    private static readonly SOURCE_AREA_OFFSET_Y = -15;
+    private static readonly OPTION_SPACING_X = 30;
     private static readonly OPTION_OFFSET_Y = 15;
     private static readonly OPTION_ROW_WRAP_X = 160;
     private static readonly OPTION_ROW_STEP_Y = 60;
+    private static stateRightFrame: cc.SpriteFrame | null = null;
+    private static stateWrongFrame: cc.SpriteFrame | null = null;
+    private static stateFramesLoadingStarted = false;
 
     @property(cc.Node)
     contentRoot: cc.Node = null;
@@ -56,10 +63,8 @@ export default class QuestionView4 extends cc.Component {
     tempNode: cc.Node = null;
 
     @property(cc.Node)
-    resultNode: cc.Node = null;
+    imgState: cc.Node = null;
 
-    @property(cc.Label)
-    resultLabel: cc.Label = null;
 
     @property(cc.Node)
     submitNode: cc.Node = null;
@@ -77,11 +82,13 @@ export default class QuestionView4 extends cc.Component {
     protected onLoad(): void {
         this.createOverlayLayout();
         this.leftLabelTitleNode = this.findContentNode("labelLL");
+        this.imgState = this.imgState || this.findContentNode("img_state");
         this.optionTemplate = this.tempNode;
         if (this.optionTemplate) {
             this.optionBaseX = this.optionTemplate.x;
             this.optionBaseY = this.optionTemplate.y;
         }
+        this.preloadStateFrames();
         this.bindSubmitNode();
         this.hideImmediate();
         this.setSubmitVisible(false);
@@ -104,8 +111,7 @@ export default class QuestionView4 extends cc.Component {
         this.orderingData = data.ordering || this.buildOrderingDataFromFallback(data);
         this.inputLocked = false;
         this.clearCurrentState();
-        // this.setSubmitVisible(true);
-        resetResultState(this.resultNode);
+        this.resetStateImage();
         this.setHeaderVisible(!this.isBattleMode);
 
         if (this.leftLabel) {
@@ -117,7 +123,7 @@ export default class QuestionView4 extends cc.Component {
         }
 
         if (this.orderingData) {
-            this.createOptionNodes(this.shuffleOptions(this.orderingData.options));
+            this.createOptionNodes(this.buildDisplayOptions(this.orderingData.options));
         }
     }
 
@@ -202,8 +208,8 @@ export default class QuestionView4 extends cc.Component {
             this.contentRoot.setPosition(this.getRestPosition());
         }
         this.clearCurrentState();
+        this.resetStateImage();
         this.setSubmitVisible(false);
-        resetResultState(this.resultNode);
         this.node.active = false;
     }
 
@@ -256,6 +262,7 @@ export default class QuestionView4 extends cc.Component {
             optionNode.parent = this.optionTemplate.parent;
             optionNode.name = `OrderOption_${option.id}_${index}`;
             this.setOptionText(optionNode, option.text);
+            this.syncOptionNodeSize(optionNode);
             this.setNodeColor(optionNode, QuestionView4.COLOR_DEFAULT);
             this.bindSourceNode(optionNode, option);
             this.optionNodes.push(optionNode);
@@ -295,7 +302,9 @@ export default class QuestionView4 extends cc.Component {
         answerNode.active = true;
         answerNode.parent = this.ansNode;
         answerNode.name = `AnswerToken_${option.id}`;
+        answerNode.y = 0;
         this.setOptionText(answerNode, option.text);
+        this.syncOptionNodeSize(answerNode);
         this.setNodeColor(answerNode, QuestionView4.COLOR_DEFAULT);
 
         const binding: TokenBinding = {
@@ -306,7 +315,6 @@ export default class QuestionView4 extends cc.Component {
         this.selectedTokens.push(binding);
         this.bindAnswerNode(answerNode, binding);
         this.refreshLayout(this.ansNode);
-        this.layoutSourceOptionNodes();
         if (this.selectedTokens.length !== this.orderingData.correctOrder.length) {
             return;
         }
@@ -328,7 +336,6 @@ export default class QuestionView4 extends cc.Component {
             this.setNodeColor(binding.sourceNode, QuestionView4.COLOR_DEFAULT);
         }
         this.refreshLayout(this.ansNode);
-        this.layoutSourceOptionNodes();
         if (this.selectedTokens.length !== this.orderingData.correctOrder.length) {
             this.setSubmitVisible(false);
         }
@@ -347,7 +354,7 @@ export default class QuestionView4 extends cc.Component {
         this.setSubmitVisible(false);
 
         const isCorrect = this.isOrderingCorrect();
-        this.applyResultState(isCorrect);
+        this.showStateImage(isCorrect);
 
         this.node.stopAllActions();
         this.node.runAction(
@@ -374,19 +381,34 @@ export default class QuestionView4 extends cc.Component {
         return this.selectedTokens.every((token, index) => token.option.id === this.orderingData!.correctOrder[index]);
     }
 
-    private applyResultState(isCorrect: boolean): void {
-        this.selectedTokens.forEach((binding) => {
-            this.setNodeColor(binding.answerNode, isCorrect
-                ? QuestionView4.COLOR_CORRECT
-                : QuestionView4.COLOR_WRONG);
-        });
-        playResultStamp(
-            this.resultNode,
-            this.resultLabel,
-            isCorrect,
-            QuestionView4.COLOR_CORRECT,
-            QuestionView4.COLOR_WRONG,
-        );
+    private showStateImage(isCorrect: boolean): void {
+        if (!this.imgState) {
+            return;
+        }
+
+        const sprite = this.imgState.getComponent(cc.Sprite);
+        const spriteFrame = isCorrect ? QuestionView4.stateRightFrame : QuestionView4.stateWrongFrame;
+        if (sprite && spriteFrame) {
+            sprite.spriteFrame = spriteFrame;
+        }
+
+        this.imgState.stopAllActions();
+        this.imgState.active = true;
+        this.imgState.opacity = 255;
+        this.imgState.scale = 1;
+        this.imgState.angle = 0;
+    }
+
+    private resetStateImage(): void {
+        if (!this.imgState) {
+            return;
+        }
+
+        this.imgState.stopAllActions();
+        this.imgState.active = false;
+        this.imgState.opacity = 255;
+        this.imgState.scale = 1;
+        this.imgState.angle = 0;
     }
 
     private clearCurrentState(): void {
@@ -417,23 +439,24 @@ export default class QuestionView4 extends cc.Component {
             return;
         }
 
-        let currentX = this.optionBaseX;
-        let currentY = this.optionBaseY + QuestionView4.OPTION_OFFSET_Y;
-        let previousWidth = 0;
+        const startWidth = this.getOptionNodeWidth(this.optionTemplate);
+        let currentX = this.optionBaseX - (startWidth * 0.5);
+        let currentY = this.optionBaseY + QuestionView4.OPTION_OFFSET_Y + QuestionView4.SOURCE_AREA_OFFSET_Y;
 
         visibleNodes.forEach((node, index) => {
-            const width = node.width || node.getContentSize().width;
+            const width = this.getOptionNodeWidth(node);
             if (index > 0) {
-                currentX += (previousWidth * 0.5) + QuestionView4.OPTION_SPACING_X + (width * 0.5);
+                currentX += QuestionView4.OPTION_SPACING_X;
             }
 
-            if (index > 0 && currentX + (width * 0.5) > QuestionView4.OPTION_ROW_WRAP_X) {
-                currentX = this.optionBaseX;
+            if (index > 0 && currentX + width > QuestionView4.OPTION_ROW_WRAP_X) {
+                currentX = this.optionBaseX - (startWidth * 0.5);
                 currentY -= QuestionView4.OPTION_ROW_STEP_Y;
             }
 
+            node.setAnchorPoint(0, 0.5);
             node.setPosition(currentX, currentY);
-            previousWidth = width;
+            currentX += width;
         });
     }
 
@@ -483,15 +506,65 @@ export default class QuestionView4 extends cc.Component {
         }
     }
 
-    private shuffleOptions(options: QuestionOption[]): OrderingDisplayOption[] {
-        const list = options.map((option) => ({ id: option.id, text: option.text }));
-        for (let i = list.length - 1; i > 0; i -= 1) {
-            const swapIndex = Math.floor(Math.random() * (i + 1));
-            const current = list[i];
-            list[i] = list[swapIndex];
-            list[swapIndex] = current;
+    private syncOptionNodeSize(node: cc.Node | null): void {
+        if (!node) {
+            return;
         }
-        return list;
+
+        const label = node.getComponentInChildren(cc.Label);
+        if (label && (label as any)._forceUpdateRenderData) {
+            (label as any)._forceUpdateRenderData(true);
+        }
+
+        this.refreshLayout(node);
+
+        const layout = node.getComponent(cc.Layout) as any;
+        const labelNode = label ? label.node : null;
+        const labelWidth = labelNode ? labelNode.getContentSize().width : node.getContentSize().width;
+        const paddingLeft = layout ? (layout._N$paddingLeft || 0) : 0;
+        const paddingRight = layout ? (layout._N$paddingRight || 0) : 0;
+        const minWidth = this.optionTemplate ? this.optionTemplate.getContentSize().width : node.getContentSize().width;
+        const width = Math.max(minWidth, labelWidth + paddingLeft + paddingRight);
+        const size = node.getContentSize();
+
+        node.setContentSize(width, size.height);
+        this.refreshLayout(node);
+    }
+
+    private getOptionNodeWidth(node: cc.Node | null): number {
+        if (!node) {
+            return 0;
+        }
+
+        this.syncOptionNodeSize(node);
+        return node.width || node.getContentSize().width;
+    }
+
+    private preloadStateFrames(): void {
+        if (QuestionView4.stateFramesLoadingStarted) {
+            return;
+        }
+        QuestionView4.stateFramesLoadingStarted = true;
+
+        const resources = (cc as any).resources;
+        if (!resources || !resources.load) {
+            return;
+        }
+
+        resources.load(QuestionView4.STATE_RIGHT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView4.stateRightFrame = spriteFrame;
+            }
+        });
+        resources.load(QuestionView4.STATE_WRONG_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView4.stateWrongFrame = spriteFrame;
+            }
+        });
+    }
+
+    private buildDisplayOptions(options: QuestionOption[]): OrderingDisplayOption[] {
+        return options.map((option) => ({ id: option.id, text: option.text }));
     }
 
     private buildOrderingDataFromFallback(data: QuestionViewData): OrderingQuestionData | null {
@@ -542,6 +615,6 @@ export default class QuestionView4 extends cc.Component {
     }
 
     private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView4.DISPLAY_OFFSET_X, 0);
+        return cc.v2(QuestionView4.DISPLAY_OFFSET_X, QuestionView4.DISPLAY_OFFSET_Y);
     }
 }

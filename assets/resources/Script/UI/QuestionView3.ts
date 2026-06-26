@@ -1,5 +1,5 @@
 import { MatchingQuestionData } from "../Core/GameDefines";
-import { playResultStamp, QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
+import { QUESTION_RESULT_DELAY } from "./QuestionResultStamp";
 
 const { ccclass, property } = cc._decorator;
 
@@ -13,29 +13,39 @@ export interface QuestionViewData {
 /** 匹配 */
 @ccclass
 export default class QuestionView3 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 200;
-    private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
-    private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
-    private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
-    private static readonly COLOR_SELECTED = new cc.Color(250, 206, 145, 255);
-    private static readonly COLOR_BLUE = new cc.Color(129, 211, 248, 255);
-    private static readonly COLOR_GREEN = new cc.Color(202, 249, 130, 255);
-    private static readonly COLOR_PURPLE = new cc.Color(128, 128, 255, 255);
+    private static readonly BAR_DEFAULT_PATH = "Texture/questionUI/bar_7";
+    private static readonly BAR_SELECTED_PATH = "Texture/questionUI/bar_4";
+    private static readonly STATE_RIGHT_PATH = "Texture/questionUI/right";
+    private static readonly STATE_WRONG_PATH = "Texture/questionUI/wrong";
+
+    @property(cc.Node)
+    submitBtn: cc.Node = null;
+
+    @property(cc.Node)
+    stateImg: cc.Node = null;
+
+    @property([cc.Label])
+    leftOptionLabels: cc.Label[] = [];
+
+    private static readonly DISPLAY_OFFSET_X = 360;
+    private static readonly DISPLAY_OFFSET_Y = 60;
     private static readonly SWAP_DURATION = 0.18;
+    private static barDefaultFrame: cc.SpriteFrame | null = null;
+    private static barSelectedFrame: cc.SpriteFrame | null = null;
+    private static stateRightFrame: cc.SpriteFrame | null = null;
+    private static stateWrongFrame: cc.SpriteFrame | null = null;
+    private static framesLoadingStarted = false;
 
     private contentRoot: cc.Node | null = null;
     private leftLabelTitleNode: cc.Node | null = null;
     private leftLabel: cc.Label | null = null;
     private alertLabel: cc.Label | null = null;
-    private leftOptionLabels: Array<cc.Label | null> = [];
     private leftOptionNodes: Array<cc.Node | null> = [];
     @property([cc.Label])
     rightOptionLabels: cc.Label[] = [];
 
     private rightOptionNodes: Array<cc.Node | null> = [];
     private initialRightOptionNodes: Array<cc.Node | null> = [];
-    private resultNode: cc.Node | null = null;
-    private resultLabel: cc.Label | null = null;
     private submitNode: cc.Node | null = null;
     private cancelBtn: cc.Node | null = null;
     private onSelect: ((index: number) => void) | null = null;
@@ -51,18 +61,16 @@ export default class QuestionView3 extends cc.Component {
     protected onLoad(): void {
         this.createOverlayLayout();
 
+        this.stateImg = this.stateImg || this.findContentNode("img_state");
         this.leftLabelTitleNode = this.findContentNode("labelLL");
         this.leftLabel = this.findLabel("LabelLeft");
         this.alertLabel = this.findLabel("LabelAlert");
         this.leftOptionNodes = [this.findContentNode("bg1"), this.findContentNode("bg2"), this.findContentNode("bg3")];
         this.rightOptionNodes = [this.findContentNode("rbg1"), this.findContentNode("rbg2"), this.findContentNode("rbg3")];
         this.initialRightOptionNodes = this.rightOptionNodes.slice();
-        this.leftOptionLabels = [this.findLabel("LabelAns1"), this.findLabel("LabelAns2"), this.findLabel("LabelAns3")];
-        this.resultNode = this.findContentNode("NodeResult");
-        this.resultLabel = this.resultNode ? this.resultNode.getComponentInChildren(cc.Label) : null;
         this.submitNode = this.findContentNode("BtnSure");
-        this.cancelBtn = this.findContentNode("BtnCancel");
         this.rightSlotPositions.push(...this.rightOptionNodes.map((node) => node ? cc.v2(node.x, node.y) : cc.v2()));
+        this.preloadFrames();
         this.bindSubmitNode();
         this.bindCancelNode();
         this.hideImmediate();
@@ -93,7 +101,7 @@ export default class QuestionView3 extends cc.Component {
         this.inputLocked = false;
         this.resetOptionState();
         this.setSubmitVisible(false);
-        resetResultState(this.resultNode);
+        this.resetStateImage();
         this.setHeaderVisible(!this.isBattleMode);
 
         if (this.leftLabel) {
@@ -108,7 +116,7 @@ export default class QuestionView3 extends cc.Component {
                 let str = this.matchingData && this.matchingData.leftOptions[i]
                     ? this.matchingData.leftOptions[i].text
                     : "";
-                this.leftOptionLabels[i]!.string = `${i+1}.${str}`;
+                this.leftOptionLabels[i]!.string = `${str}`;
             }
         }
 
@@ -200,7 +208,7 @@ export default class QuestionView3 extends cc.Component {
         }
         this.resetOptionState();
         this.setSubmitVisible(false);
-        resetResultState(this.resultNode);
+        this.resetStateImage();
         this.node.active = false;
     }
 
@@ -329,10 +337,10 @@ export default class QuestionView3 extends cc.Component {
         this.resetOptionState();
 
         if (this.selectedLeftIndex >= 0) {
-            this.setNodeColor(this.leftOptionNodes[this.selectedLeftIndex], QuestionView3.COLOR_SELECTED);
+            this.applyOptionFrame(this.leftOptionNodes[this.selectedLeftIndex], "selected");
         }
         if (this.selectedRightIndex >= 0) {
-            this.setNodeColor(this.rightOptionNodes[this.selectedRightIndex], QuestionView3.COLOR_SELECTED);
+            this.applyOptionFrame(this.rightOptionNodes[this.selectedRightIndex], "selected");
         }
     }
 
@@ -391,40 +399,7 @@ export default class QuestionView3 extends cc.Component {
         }
 
         this.resetOptionState();
-
-        const colors = [QuestionView3.COLOR_BLUE, QuestionView3.COLOR_GREEN, QuestionView3.COLOR_PURPLE];
-
-        this.matchingData.leftOptions.forEach((leftOption, leftIndex) => {
-            const correctMatch = this.matchingData!.correctMatches.find((match) => match.leftId === leftOption.id);
-            if (isCorrect) {
-                this.setNodeColor(this.leftOptionNodes[leftIndex], QuestionView3.COLOR_CORRECT);
-                this.setNodeColor(this.rightOptionNodes[leftIndex], QuestionView3.COLOR_CORRECT);
-            } else {
-                this.setNodeColor(this.leftOptionNodes[leftIndex], colors[leftIndex]);
-
-                if (!correctMatch) {
-                    return;
-                }
-
-                const correctRightOptionIndex = this.matchingData!.rightOptions.findIndex(
-                    (option) => option.id === correctMatch.rightId,
-                );
-                const currentRightNodeIndex = this.rightOptionOrder.findIndex(
-                    (optionIndex) => optionIndex === correctRightOptionIndex,
-                );
-                if (currentRightNodeIndex >= 0) {
-                    this.setNodeColor(this.rightOptionNodes[currentRightNodeIndex], colors[leftIndex]);
-                }
-            }
-        });
-
-        playResultStamp(
-            this.resultNode,
-            this.resultLabel,
-            isCorrect,
-            QuestionView3.COLOR_CORRECT,
-            QuestionView3.COLOR_WRONG,
-        );
+        this.showStateImage(isCorrect);
     }
 
     private swapRightOptionsToSelectedLeft(): void {
@@ -441,38 +416,37 @@ export default class QuestionView3 extends cc.Component {
             return;
         }
 
-        const targetNode = this.rightOptionNodes[targetSlot];
-        const sourceNode = this.rightOptionNodes[sourceSlot];
-        const targetPosition = this.rightSlotPositions[targetSlot];
-        const sourcePosition = this.rightSlotPositions[sourceSlot];
-        if (!targetNode || !sourceNode || !targetPosition || !sourcePosition) {
+        const movingNode = this.rightOptionNodes[sourceSlot];
+        const movingOrder = this.rightOptionOrder[sourceSlot];
+        if (!movingNode || movingOrder === undefined) {
             this.selectedLeftIndex = -1;
             this.selectedRightIndex = -1;
             this.refreshSelectionState();
             return;
         }
 
-        this.inputLocked = true;
-        targetNode.stopAllActions();
-        sourceNode.stopAllActions();
+        const nextRightOptionNodes = this.rightOptionNodes.slice();
+        const nextRightOptionOrder = this.rightOptionOrder.slice();
+        nextRightOptionNodes.splice(sourceSlot, 1);
+        nextRightOptionOrder.splice(sourceSlot, 1);
+        nextRightOptionNodes.splice(targetSlot, 0, movingNode);
+        nextRightOptionOrder.splice(targetSlot, 0, movingOrder);
 
-        let remaining = 2;
-        const onSwapFinished = (): void => {
+        this.inputLocked = true;
+        let remaining = 0;
+        const onMoveFinished = (): void => {
             remaining -= 1;
             if (remaining > 0) {
                 return;
             }
 
-            const tempNode = this.rightOptionNodes[targetSlot];
-            this.rightOptionNodes[targetSlot] = this.rightOptionNodes[sourceSlot];
-            this.rightOptionNodes[sourceSlot] = tempNode;
-
-            const tempOrder = this.rightOptionOrder[targetSlot];
-            this.rightOptionOrder[targetSlot] = this.rightOptionOrder[sourceSlot];
-            this.rightOptionOrder[sourceSlot] = tempOrder;
-
-            this.rightOptionNodes[targetSlot]!.setPosition(targetPosition);
-            this.rightOptionNodes[sourceSlot]!.setPosition(sourcePosition);
+            this.rightOptionNodes = nextRightOptionNodes;
+            this.rightOptionOrder = nextRightOptionOrder;
+            this.rightOptionNodes.forEach((node, index) => {
+                if (node && this.rightSlotPositions[index]) {
+                    node.setPosition(this.rightSlotPositions[index]);
+                }
+            });
 
             this.selectedLeftIndex = -1;
             this.selectedRightIndex = -1;
@@ -480,18 +454,31 @@ export default class QuestionView3 extends cc.Component {
             this.refreshSelectionState();
         };
 
-        targetNode.runAction(
-            cc.sequence(
-                cc.moveTo(QuestionView3.SWAP_DURATION, sourcePosition).easing(cc.easeSineInOut()),
-                cc.callFunc(onSwapFinished),
-            ),
-        );
-        sourceNode.runAction(
-            cc.sequence(
-                cc.moveTo(QuestionView3.SWAP_DURATION, targetPosition).easing(cc.easeSineInOut()),
-                cc.callFunc(onSwapFinished),
-            ),
-        );
+        for (let i = 0; i < nextRightOptionNodes.length; i += 1) {
+            const node = nextRightOptionNodes[i];
+            const targetPosition = this.rightSlotPositions[i];
+            if (!node || !targetPosition) {
+                continue;
+            }
+
+            remaining += 1;
+            node.stopAllActions();
+            node.runAction(
+                cc.sequence(
+                    cc.moveTo(QuestionView3.SWAP_DURATION, targetPosition).easing(cc.easeSineInOut()),
+                    cc.callFunc(onMoveFinished),
+                ),
+            );
+        }
+
+        if (remaining <= 0) {
+            this.rightOptionNodes = nextRightOptionNodes;
+            this.rightOptionOrder = nextRightOptionOrder;
+            this.selectedLeftIndex = -1;
+            this.selectedRightIndex = -1;
+            this.inputLocked = false;
+            this.refreshSelectionState();
+        }
     }
 
     private applyRightOptionOrderToView(): void {
@@ -499,7 +486,7 @@ export default class QuestionView3 extends cc.Component {
             return;
         }
 
-        let arr = ["A","B","C"];
+        let arr = ["","",""];
         for (let i = 0; i < this.rightOptionNodes.length; i += 1) {
             const node = this.rightOptionNodes[i];
             const optionIndex = this.rightOptionOrder[i];
@@ -517,7 +504,7 @@ export default class QuestionView3 extends cc.Component {
                 let str = optionIndex >= 0 && optionIndex < this.matchingData.rightOptions.length
                     ? this.matchingData.rightOptions[optionIndex].text
                     : "";
-                label.string = `${arr[i]}.${str}`;
+                label.string = `${str}`;
             }
         }
     }
@@ -572,15 +559,95 @@ export default class QuestionView3 extends cc.Component {
     }
 
     private resetOptionState(): void {
-        this.leftOptionNodes.forEach((node) => this.setNodeColor(node, QuestionView3.COLOR_DEFAULT));
-        this.rightOptionNodes.forEach((node) => this.setNodeColor(node, QuestionView3.COLOR_DEFAULT));
+        this.leftOptionNodes.forEach((node) => {
+            this.applyOptionFrame(node, "default");
+        });
+        this.rightOptionNodes.forEach((node) => {
+            this.applyOptionFrame(node, "default");
+        });
     }
 
-    private setNodeColor(target: { color?: cc.Color } | null, color: cc.Color): void {
-        if (!target) {
+    private applyOptionFrame(node: cc.Node | null, state: "default" | "selected"): void {
+        if (!node) {
             return;
         }
-        target.color = color;
+
+        const sprite = node.getComponent(cc.Sprite);
+        if (!sprite) {
+            return;
+        }
+
+        const spriteFrame = state === "selected"
+            ? (QuestionView3.barSelectedFrame || QuestionView3.barDefaultFrame)
+            : QuestionView3.barDefaultFrame;
+        if (spriteFrame) {
+            sprite.spriteFrame = spriteFrame;
+        }
+    }
+
+    private showStateImage(isCorrect: boolean): void {
+        if (!this.stateImg) {
+            return;
+        }
+
+        const sprite = this.stateImg.getComponent(cc.Sprite);
+        const spriteFrame = isCorrect ? QuestionView3.stateRightFrame : QuestionView3.stateWrongFrame;
+        if (sprite && spriteFrame) {
+            sprite.spriteFrame = spriteFrame;
+        }
+
+        this.stateImg.stopAllActions();
+        this.stateImg.active = true;
+        this.stateImg.opacity = 255;
+        this.stateImg.scale = 1;
+        this.stateImg.angle = 0;
+    }
+
+    private resetStateImage(): void {
+        if (!this.stateImg) {
+            return;
+        }
+
+        this.stateImg.stopAllActions();
+        this.stateImg.active = false;
+        this.stateImg.opacity = 255;
+        this.stateImg.scale = 1;
+        this.stateImg.angle = 0;
+    }
+
+    private preloadFrames(): void {
+        if (QuestionView3.framesLoadingStarted) {
+            return;
+        }
+        QuestionView3.framesLoadingStarted = true;
+
+        const resources = (cc as any).resources;
+        if (!resources || !resources.load) {
+            return;
+        }
+
+        resources.load(QuestionView3.BAR_DEFAULT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.barDefaultFrame = spriteFrame;
+                this.refreshSelectionState();
+            }
+        });
+        resources.load(QuestionView3.BAR_SELECTED_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.barSelectedFrame = spriteFrame;
+                this.refreshSelectionState();
+            }
+        });
+        resources.load(QuestionView3.STATE_RIGHT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.stateRightFrame = spriteFrame;
+            }
+        });
+        resources.load(QuestionView3.STATE_WRONG_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.stateWrongFrame = spriteFrame;
+            }
+        });
     }
 
     private getLeftLabelText(data: QuestionViewData): string {
@@ -612,6 +679,6 @@ export default class QuestionView3 extends cc.Component {
     }
 
     private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView3.DISPLAY_OFFSET_X, 0);
+        return cc.v2(QuestionView3.DISPLAY_OFFSET_X, QuestionView3.DISPLAY_OFFSET_Y);
     }
 }

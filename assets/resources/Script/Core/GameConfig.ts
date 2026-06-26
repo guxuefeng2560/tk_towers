@@ -21,7 +21,7 @@ export const GameConfig = {
 
     player: {
         maxHp: 1800,
-        baseAttack: 350,
+        baseAttack: 35,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,

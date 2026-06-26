@@ -13,6 +13,7 @@ import CarManager from "./CarManager";
 interface BattleCallbacks {
     onNeedQuestion: (skillType: SkillType, cost: number) => void;
     onBattleFinished: (isWin: boolean) => void;
+    onBattleFailSequenceStart: () => void;
 }
 
 export default class BattleController {
@@ -25,6 +26,7 @@ export default class BattleController {
     private readonly monsterManager: MonsterManager;
     private readonly carManager: CarManager;
     private readonly callbacks: BattleCallbacks;
+    private failSequenceTriggered = false;
 
     public constructor(runtime: GameRuntime, callbacks: BattleCallbacks) {
         this.runtime = runtime;
@@ -55,6 +57,7 @@ export default class BattleController {
         this.runtime.resetTransientFlow();
         this.runtime.bossHp = GameConfig.boss.hp;
         this.runtime.resetActorPlacement();
+        this.failSequenceTriggered = false;
         this.runtime.context.phase = GamePhase.Battle;
     }
 
@@ -175,6 +178,7 @@ export default class BattleController {
 
     public clearBattle(): void {
         this.runtime.clearBattleObjects();
+        this.failSequenceTriggered = false;
     }
 
     private updateEnergy(dt: number): void {
@@ -260,15 +264,18 @@ export default class BattleController {
     }
 
     private checkFailState(): void {
-        if (this.runtime.context.playerHp > 0) {
+        if (this.runtime.context.playerHp > 0 || this.failSequenceTriggered) {
             return;
         }
         this.runtime.context.playerHp = 0;
-        this.finishBattle(false);
+        this.failSequenceTriggered = true;
+        this.runtime.playHeroFailSequence();
+        this.callbacks.onBattleFailSequenceStart();
     }
 
     private finishBattle(isWin: boolean): void {
         this.runtime.clearBattleObjects();
+        this.failSequenceTriggered = false;
         this.callbacks.onBattleFinished(isWin);
     }
 

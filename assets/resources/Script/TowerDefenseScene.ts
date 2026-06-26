@@ -35,6 +35,9 @@ export default class TowerDefenseScene extends cc.Component {
     SpineHero: cc.Node = null;
 
     @property(cc.Node)
+    SpineBow: cc.Node = null;
+
+    @property(cc.Node)
     NodeShootLine: cc.Node = null;
 
     @property(cc.Node)
@@ -172,13 +175,13 @@ export default class TowerDefenseScene extends cc.Component {
             flagNode: this.NodeFlag,
             sanNode: this.NodeSan,
             heroSpineNode: this.SpineHero,
+            bowSpineNode: this.SpineBow,
             shootLineNode: this.NodeShootLine,
             carBaseNode: this.NodeCar0,
             carNode: this.NodeCar,
             wheelNodes: this.NodeSweelArr,
             heroProgressBar: this.ProgressHeroBar,
             bossNode: this.NodeBoss,
-            bossVariantNodes: this.NodeBossVec,
             monsterRoot: this.NodeMonster,
             bossProgressBar: this.ProgressBossBar,
             bossHpLabel: this.LabelBossHp,
@@ -292,6 +295,10 @@ export default class TowerDefenseScene extends cc.Component {
         const firePosition = this.runtime.getHeroFireWorldPosition();
         const touchLocation = event.getLocation();
         const touchInWorld = this.runtime.worldRoot.convertToNodeSpaceAR(touchLocation);
+        if (touchInWorld.x <= firePosition.x) {
+            this.clearForcedAimDirection();
+            return;
+        }
         let direction = cc.v2(touchInWorld.x - firePosition.x, touchInWorld.y - firePosition.y);
         if (direction.magSqr() <= 1) {
             direction = cc.v2(1, 0);

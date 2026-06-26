@@ -53,13 +53,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "妈妈____我去玩。",
+        ques: "妈妈(  )我去玩。",
         answer1: "不让",
         answer2: "让不",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "妈妈____我去玩。",
+            prompt: "妈妈(  )我去玩。",
             options: [
                 { id: "fill_1_a", text: "不让" },
                 { id: "fill_1_b", text: "让不" },
@@ -70,13 +70,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "我____来我家里吃饭。",
+        ques: "我(  )来我家里吃饭。",
         answer1: "请朋友们",
         answer2: "朋友们请",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "我____来我家里吃饭。",
+            prompt: "我(  )来我家里吃饭。",
             options: [
                 { id: "fill_1_a", text: "请朋友们" },
                 { id: "fill_1_b", text: "朋友们请" },
@@ -87,13 +87,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "医生____他喝冷水。",
+        ques: "医生(  )他喝冷水。",
         answer1: "不让",
         answer2: "让不",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "医生____他喝冷水。",
+            prompt: "医生(  )他喝冷水。",
             options: [
                 { id: "fill_1_a", text: "不让" },
                 { id: "fill_1_b", text: "让不" },
@@ -104,13 +104,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "他生病了，妈妈____早点儿休息。",
+        ques: "他生病了，妈妈(  )早点儿休息。",
         answer1: "让他",
         answer2: "他让",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "他生病了，妈妈____早点儿休息。",
+            prompt: "他生病了，妈妈(  )早点儿休息。",
             options: [
                 { id: "fill_1_a", text: "让他" },
                 { id: "fill_1_b", text: "他让" },
@@ -121,13 +121,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "爸爸工作太忙，他____去学校接妹妹。",
+        ques: "爸爸工作太忙，他(  )去学校接妹妹。",
         answer1: "叫我",
         answer2: "我叫",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "爸爸工作太忙，他____去学校接妹妹。",
+            prompt: "爸爸工作太忙，他(  )去学校接妹妹。",
             options: [
                 { id: "fill_1_a", text: "叫我" },
                 { id: "fill_1_b", text: "我叫" },
@@ -138,13 +138,13 @@ const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
     {
         title: "题型1 选择填空",
         aleart: "选择正确的搭配",
-        ques: "姐姐工作太忙了，今天她____大家看电影。",
+        ques: "姐姐工作太忙了，今天她(  )大家看电影。",
         answer1: "没请",
         answer2: "请没",
         correctAnswerIndex: 0,
         questionType: QuestionType.FillBlankChoice,
         fillBlankChoice: {
-            prompt: "姐姐工作太忙了，今天她____大家看电影。",
+            prompt: "姐姐工作太忙了，今天她(  )大家看电影。",
             options: [
                 { id: "fill_1_a", text: "没请" },
                 { id: "fill_1_b", text: "请没" },
@@ -452,7 +452,7 @@ const TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS: QuestionBankItem[] = [
         questionType: QuestionType.SplitSentenceChoice,
         splitSentenceChoice: {
             sentence1: "问：老师叫他做什么？",
-            sentence2WithBlank: "答：_____",
+            sentence2WithBlank: "答：_______________",
             options: [
                 { id: "split_1_a", text: "老师叫他不看书。" },
                 { id: "split_1_b", text: "老师不叫他看书。" },
@@ -472,7 +472,7 @@ const TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS: QuestionBankItem[] = [
         questionType: QuestionType.SplitSentenceChoice,
         splitSentenceChoice: {
             sentence1: "问：他生病了，妈妈让他去玩吗？",
-            sentence2WithBlank: "答：_____",
+            sentence2WithBlank: "答：________________________",
             options: [
                 { id: "split_1_a", text: "妈妈不让他去玩。" },
                 { id: "split_1_b", text: "妈妈让他不去玩。" },
@@ -515,8 +515,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "老师让我去学校。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_a",
         },
@@ -532,8 +532,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "妈妈请我给妹妹帮忙。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_a",
         },
@@ -549,8 +549,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "爸爸不让我去接他。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_a",
         },
@@ -566,8 +566,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "医生让不我喝冷水。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_b",
         },
@@ -583,8 +583,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "姐姐不请我吃晚饭。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_a",
         },
@@ -600,8 +600,8 @@ const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
         checkRight: {
             prompt: "老师让我不去她家。",
             options: [
-                { id: "check_1_a", text: "√" },
-                { id: "check_1_b", text: "×" },
+                { id: "check_1_a", text: "正确" },
+                { id: "check_1_b", text: "错误" },
             ],
             correctOptionId: "check_1_b",
         },
@@ -624,6 +624,7 @@ const TEST_BATTLE_QUESTION_SETS: QuestionBankItem[][] = [
 
 const ACTIVE_BATTLE_QUESTION_SETS: QuestionBankItem[][] = [
     TEST_FILL_BLANK_CHOICE_QUESTIONS,
+    TEST_IMAGE_CHOICE_QUESTIONS,
     TEST_MATCHING_QUESTIONS,
     TEST_ORDERING_QUESTIONS,
     TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS,
@@ -657,14 +658,17 @@ function getLoopIndex(index: number, length: number): number {
 
 /**
  * 根据当前轮次选择本轮使用的题集。
- * round 为 1 基下标：1=>题型1，2=>题型2，...，6=>题型6，7=>题型1。
+ * 固定映射：
+ * 1=>题型6，2=>题型1，3=>题型5，4=>题型3，5=>题型4。
  * 准备阶段和战斗阶段都使用该方法，确保同一轮只出现单一题型。
  */
 function getQuestionSetByRound(round: number): QuestionBankItem[] {
     if (ACTIVE_BATTLE_QUESTION_SETS.length <= 0) {
         return TEST_QUESTION_BANK;
     }
-    const roundIndex = getLoopIndex(Math.max(1, Math.floor(round)) - 1, ACTIVE_BATTLE_QUESTION_SETS.length);
+    const roundToQuestionSetIndex = [5, 0, 4, 2, 3];
+    const normalizedRoundIndex = getLoopIndex(Math.max(1, Math.floor(round)) - 1, roundToQuestionSetIndex.length);
+    const roundIndex = roundToQuestionSetIndex[normalizedRoundIndex];
     const selectedSet = ACTIVE_BATTLE_QUESTION_SETS[roundIndex];
     return selectedSet && selectedSet.length > 0 ? selectedSet : TEST_QUESTION_BANK;
 }

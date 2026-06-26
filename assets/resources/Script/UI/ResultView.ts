@@ -33,6 +33,11 @@ export default class ResultView extends cc.Component {
     public initialize(onRetry: () => void, onCloseWin: () => void): void {
         this.onRetry = onRetry;
         this.onCloseWin = onCloseWin;
+        this.bindButton(this.node, () => {
+            if (this.lastData && this.lastData.isWin && this.onCloseWin) {
+                this.onCloseWin();
+            }
+        });
         this.bindButton(this.backgroundNode, () => {
             if (this.lastData && this.lastData.isWin && this.onCloseWin) {
                 this.onCloseWin();

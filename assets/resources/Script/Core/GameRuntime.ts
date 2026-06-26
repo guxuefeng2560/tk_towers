@@ -14,6 +14,13 @@ export default class GameRuntime {
     private static readonly CAR_PREFAB_PATH = "prefab/car";
     private static readonly ROLLER_SPRITE_PATH = "Texture/battleUI/ci1";
     private static readonly SHIELD_SPRITE_PATH = "Texture/battleRes/def";
+    private static readonly BOSS_SPRITE_PATHS = [
+        "Texture/battleRes/boss1",
+        "Texture/battleRes/boss2",
+        "Texture/battleRes/boss3",
+        "Texture/battleRes/boss4",
+        "Texture/battleRes/boss5",
+    ];
     private static readonly BULLET_GROUND_SPRITE_PATH = "Texture/ui/bullet1";
     private static readonly BOMB_SPINE_PATH = "Texture/spine/effect/1001_die";
 
@@ -31,6 +38,7 @@ export default class GameRuntime {
     public carPrefab: cc.Prefab | null = null;
     public rollerSpriteFrame: cc.SpriteFrame | null = null;
     public shieldSpriteFrame: cc.SpriteFrame | null = null;
+    public bossSpriteFrames: Array<cc.SpriteFrame | null> = Array(GameRuntime.BOSS_SPRITE_PATHS.length).fill(null);
     public bulletGroundSpriteFrame: cc.SpriteFrame | null = null;
     public bombEffectSpineData: sp.SkeletonData | null = null;
     public monsterSpineData: Record<MonsterKind, sp.SkeletonData | null> = {
@@ -90,6 +98,8 @@ export default class GameRuntime {
     private heroBaseLocalY = 0;
     private flagBaseLocalY = 0;
     private heroSpineLocalY = 0;
+    private weaponNodeBaseAngle = 0;
+    private sanNodeBaseAngle = 0;
     private heroProgressLocalY = 0;
     private sawLocalX = 0;
     private sawLocalY = 0;
@@ -148,9 +158,10 @@ export default class GameRuntime {
 
     public resetActorPlacement(): void {
         this.refreshRoundAnchors();
-        // this.syncBossVariantPresentation();
+        this.updateBossSpritePresentation();
         this.applyUnlockPresentation();
         this.syncSceneBars();
+        this.restoreHeroPresentation();
 
         if (this.refs.bossNode) {
             this.refs.bossNode.active = false;
@@ -177,9 +188,10 @@ export default class GameRuntime {
 
     public refreshPreparePresentation(): void {
         this.refreshRoundAnchors();
-        // this.syncBossVariantPresentation();
+        this.updateBossSpritePresentation();
         this.applyUnlockPresentation();
         this.syncSceneBars();
+        this.restoreHeroPresentation();
 
         const currentCarX = this.logicalToLocalX(this.context.reachedDistance);
         this.syncCarPresentation();
@@ -221,6 +233,44 @@ export default class GameRuntime {
             }
             this.refs.bossNode.y = this.bossLocalY;
         }
+    }
+
+    public playHeroFailSequence(): void {
+        const heroNode = this.refs.heroNode;
+        if (heroNode) {
+            heroNode.stopAllActions();
+            heroNode.active = true;
+            heroNode.opacity = 255;
+        }
+
+        if (this.refs.heroSpineNode) {
+            this.refs.heroSpineNode.stopAllActions();
+            this.refs.heroSpineNode.active = false;
+            this.refs.heroSpineNode.opacity = 255;
+        }
+
+        const weaponNode = this.refs.bowSpineNode ? this.refs.bowSpineNode.parent : null;
+        if (weaponNode) {
+            weaponNode.stopAllActions();
+            weaponNode.active = false;
+            weaponNode.opacity = 255;
+            weaponNode.angle = this.weaponNodeBaseAngle;
+        }
+
+        if (this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent) {
+            this.refs.heroProgressBar.node.parent.stopAllActions();
+            this.refs.heroProgressBar.node.parent.active = false;
+            this.refs.heroProgressBar.node.parent.opacity = 255;
+        }
+
+        const sanNode = this.refs.sanNode;
+        if (!sanNode) {
+            return;
+        }
+
+        sanNode.stopAllActions();
+        sanNode.angle = this.sanNodeBaseAngle;
+        sanNode.runAction(cc.rotateBy(1, -120));
     }
 
     public createMonsterNode(): cc.Node {
@@ -285,30 +335,55 @@ export default class GameRuntime {
     }
 
     public configureMonsterNode(node: cc.Node, kind: MonsterKind): void {
+        node.stopAllActions();
+        node.opacity = 255;
         const spineNode = node.getChildByName("NodeSpine");
         const spine = spineNode ? spineNode.getComponent(sp.Skeleton) : null;
         const skeletonData = this.monsterSpineData[kind];
         if (spine && skeletonData) {
             spine.skeletonData = skeletonData;
             spine.setCompleteListener(null);
-            this.playSkeletonLoop(spine, this.getDefaultMonsterLoopAnimation(spine));
+            this.playSkeletonLoop(spine, this.getMonsterMoveLoopAnimation(spine));
         }
     }
 
-    public playHeroAttack(): void {
-        const spine = this.getHeroSpine();
-        if (!spine) {
+    public playHeroAttack(direction?: cc.Vec2 | null): void {
+        const heroSpine = this.getHeroSpine();
+        if (heroSpine) {
+            this.playSkeletonOnce(heroSpine, "attack", this.getDefaultHeroLoopAnimation(heroSpine));
+        }
+
+        this.rotateBowToDirection(direction || null);
+        const bowSpine = this.getBowSpine();
+        if (!bowSpine) {
             return;
         }
-        this.playSkeletonOnce(spine, "attack1", this.getDefaultHeroLoopAnimation(spine));
+        this.playSkeletonOnce(bowSpine, "attack", this.getDefaultBowLoopAnimation(bowSpine));
     }
 
     public playHeroIdle(): void {
-        const spine = this.getHeroSpine();
-        if (!spine) {
+        const heroSpine = this.getHeroSpine();
+        if (heroSpine) {
+            this.playSkeletonLoop(heroSpine, this.getDefaultHeroLoopAnimation(heroSpine));
+        }
+
+        const bowSpine = this.getBowSpine();
+        if (!bowSpine) {
             return;
         }
-        this.playSkeletonLoop(spine, this.getDefaultHeroLoopAnimation(spine));
+        this.playSkeletonLoop(bowSpine, this.getDefaultBowLoopAnimation(bowSpine));
+    }
+
+    public rotateBowToDirection(direction: cc.Vec2 | null): void {
+        const weaponNode = this.refs.bowSpineNode ? this.refs.bowSpineNode.parent : null;
+        if (!weaponNode || !direction) {
+            return;
+        }
+
+        const normalizedDirection = direction.magSqr() <= 0.0001
+            ? cc.v2(1, 0)
+            : direction.normalize();
+        weaponNode.angle = this.weaponNodeBaseAngle + Math.atan2(normalizedDirection.y, normalizedDirection.x) * 180 / Math.PI;
     }
 
     public playMonsterAttack(node: cc.Node): void {
@@ -316,7 +391,7 @@ export default class GameRuntime {
         if (!spine) {
             return;
         }
-        this.playSkeletonOnce(spine, "attack", this.getDefaultMonsterLoopAnimation(spine));
+        this.playSkeletonOnce(spine, "attack", this.getMonsterIdleLoopAnimation(spine));
     }
 
     public playMonsterIdle(node: cc.Node): void {
@@ -324,7 +399,7 @@ export default class GameRuntime {
         if (!spine) {
             return;
         }
-        this.playSkeletonLoop(spine, this.findSkeletonAnimationName(spine, ["idle", spine.defaultAnimation, "walk"]));
+        this.playSkeletonLoop(spine, this.getMonsterIdleLoopAnimation(spine));
     }
 
     public playMonsterMove(node: cc.Node): void {
@@ -332,29 +407,99 @@ export default class GameRuntime {
         if (!spine) {
             return;
         }
-        this.playSkeletonLoop(spine, this.getDefaultMonsterLoopAnimation(spine));
+        this.playSkeletonLoop(spine, this.getMonsterMoveLoopAnimation(spine));
+    }
+
+    public isMonsterAttackPlaying(node: cc.Node): boolean {
+        const spine = this.getMonsterSpine(node);
+        if (!spine) {
+            return false;
+        }
+        return this.isSkeletonPlayingAnyAnimation(spine, ["attack"], false);
     }
 
     public playMonsterDie(node: cc.Node, onComplete: () => void): boolean {
         const spine = this.getMonsterSpine(node);
-        if (!spine) {
-            onComplete();
-            return false;
+        node.stopAllActions();
+        if (spine) {
+            spine.clearTracks();
         }
 
-        const dieAnimation = this.findSkeletonAnimationName(spine, ["die"]);
-        if (!dieAnimation) {
-            onComplete();
+        node.runAction(
+            cc.sequence(
+                cc.fadeOut(0.2),
+                cc.callFunc(() => {
+                    node.opacity = 255;
+                    node.stopAllActions();
+                    if (spine) {
+                        spine.setCompleteListener(null);
+                    }
+                    onComplete();
+                }),
+            ),
+        );
+        return true;
+    }
+
+    private getMonsterIdleLoopAnimation(spine: sp.Skeleton): string | null {
+        return this.findSkeletonAnimationName(spine, ["idle", spine.defaultAnimation, "run", "walk"]);
+    }
+
+    private getMonsterMoveLoopAnimation(spine: sp.Skeleton): string | null {
+        return this.findSkeletonAnimationName(spine, ["run", spine.defaultAnimation, "walk", "idle"]);
+    }
+
+    private getCurrentSkeletonTrack(spine: sp.Skeleton): any | null {
+        const getter = (spine as any).getCurrent;
+        if (typeof getter !== "function") {
+            return null;
+        }
+        return getter.call(spine, 0);
+    }
+
+    private isSkeletonPlayingAnyAnimation(spine: sp.Skeleton, names: string[], requireLoop: boolean): boolean {
+        const currentTrack = this.getCurrentSkeletonTrack(spine);
+        if (!currentTrack || !currentTrack.animation) {
             return false;
+        }
+        if (requireLoop && !currentTrack.loop) {
+            return false;
+        }
+        if (!requireLoop && currentTrack.loop) {
+            return false;
+        }
+        return names.indexOf(currentTrack.animation.name) >= 0;
+    }
+
+    private isSkeletonPlayingLoop(spine: sp.Skeleton, animationName: string): boolean {
+        return this.isSkeletonPlayingAnyAnimation(spine, [animationName], true);
+    }
+
+    private playSkeletonLoop(spine: sp.Skeleton, animationName: string | null): void {
+        if (!animationName) {
+            return;
+        }
+        if (this.isSkeletonPlayingLoop(spine, animationName)) {
+            return;
+        }
+        spine.clearTracks();
+        spine.setAnimation(0, animationName, true);
+    }
+
+    private playSkeletonOnce(spine: sp.Skeleton, animationName: string, fallbackAnimation: string | null): void {
+        const onceAnimation = this.findSkeletonAnimationName(spine, [animationName]);
+        if (!onceAnimation) {
+            if (fallbackAnimation) {
+                this.playSkeletonLoop(spine, fallbackAnimation);
+            }
+            return;
         }
 
         spine.clearTracks();
-        const trackEntry = spine.setAnimation(0, dieAnimation, false);
-        spine.setTrackCompleteListener(trackEntry, () => {
-            spine.setTrackCompleteListener(trackEntry, null as any);
-            onComplete();
-        });
-        return true;
+        spine.setAnimation(0, onceAnimation, false);
+        if (fallbackAnimation) {
+            spine.addAnimation(0, fallbackAnimation, true, 0);
+        }
     }
 
     public createBulletNode(): cc.Node {
@@ -477,7 +622,7 @@ export default class GameRuntime {
             return;
         }
 
-        // this.syncBossVariantPresentation();
+        this.updateBossSpritePresentation();
         const visibleRight = this.cameraTrackX + GameConfig.designWidth / 2;
         const leftEdgeX = visibleRight + GameConfig.boss.entranceScreenPadding;
         bossNode.x = leftEdgeX + bossNode.anchorX * this.getNodeLocalDisplayWidth(bossNode);
@@ -658,12 +803,12 @@ export default class GameRuntime {
     public getHeroFireWorldPosition(): cc.Vec2 {
         if (!this.refs.heroSpineNode) {
             const heroPosition = this.getHeroWorldPosition();
-            return cc.v2(heroPosition.x + 50, heroPosition.y + 150);
+            return cc.v2(heroPosition.x + 21, heroPosition.y + 38);
         }
         const spinePosition = this.getNodePositionInWorldRoot(this.refs.heroSpineNode);
         return cc.v2(
-            spinePosition.x + 50,//this.heroFireOffsetFromSpine.x,
-            spinePosition.y + 13//this.heroFireOffsetFromSpine.y,
+            spinePosition.x + 21,//this.heroFireOffsetFromSpine.x,
+            spinePosition.y + 38//this.heroFireOffsetFromSpine.y,
         );
     }
 
@@ -747,6 +892,16 @@ export default class GameRuntime {
             this.updateShieldPresentation();
         });
 
+        GameRuntime.BOSS_SPRITE_PATHS.forEach((path, index) => {
+            resources.load(path, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+                if (error || !spriteFrame) {
+                    return;
+                }
+                this.bossSpriteFrames[index] = spriteFrame;
+                this.updateBossSpritePresentation();
+            });
+        });
+
         resources.load(GameRuntime.BULLET_GROUND_SPRITE_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
             if (error || !spriteFrame) {
                 return;
@@ -761,14 +916,14 @@ export default class GameRuntime {
             this.bombEffectSpineData = data;
         });
 
-        resources.load("Texture/spine/monster/e1", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
+        resources.load("Texture/spine/monster/bangzi", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
             if (error || !data) {
                 return;
             }
             this.monsterSpineData.normal = data;
         });
 
-        resources.load("Texture/spine/monster/e2", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
+        resources.load("Texture/spine/monster/bangzi", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
             if (error || !data) {
                 return;
             }
@@ -800,6 +955,10 @@ export default class GameRuntime {
         this.carLocalY = this.refs.carNode ? this.refs.carNode.y : 0;
         this.syncCarColliderMetrics();
         this.heroSpineLocalY = this.refs.heroSpineNode ? this.refs.heroSpineNode.y : 0;
+        this.weaponNodeBaseAngle = this.refs.bowSpineNode && this.refs.bowSpineNode.parent
+            ? this.refs.bowSpineNode.parent.angle
+            : 0;
+        this.sanNodeBaseAngle = this.refs.sanNode ? this.refs.sanNode.angle : 0;
         this.heroProgressLocalY = this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent
             ? this.refs.heroProgressBar.node.parent.y
             : 0;
@@ -861,23 +1020,33 @@ export default class GameRuntime {
         }
     }
 
-    private syncBossVariantPresentation(): void {
-        const bossVariantNodes = this.refs.bossVariantNodes || [];
-        if (bossVariantNodes.length === 0) {
+    private updateBossSpritePresentation(): void {
+        const bossNode = this.refs.bossNode;
+        if (!bossNode) {
             return;
         }
 
-        const bossIndex = Math.max(0, Math.min(bossVariantNodes.length - 1, this.context.currentRound - 1));
-        bossVariantNodes.forEach((node, index) => {
-            if (!node || !cc.isValid(node)) {
-                return;
-            }
-            node.active = index === bossIndex;
-        });
+        const iconNode = bossNode.getChildByName("icon");
+        if (!iconNode) {
+            return;
+        }
+
+        const sprite = iconNode.getComponent(cc.Sprite);
+        if (!sprite) {
+            return;
+        }
+
+        const bossIndex = Math.max(0, Math.min(this.bossSpriteFrames.length - 1, this.context.currentRound - 1));
+        const spriteFrame = this.bossSpriteFrames[bossIndex];
+        if (spriteFrame) {
+            sprite.spriteFrame = spriteFrame;
+            iconNode.setContentSize(spriteFrame.getOriginalSize());
+        }
     }
 
     private applyWorldAnchors(): void {
         this.restoreScenePlacement();
+        this.restoreHeroPresentation();
         if (this.refs.heroNode) {
             this.refs.heroNode.y = this.heroAliveY;
         }
@@ -1085,6 +1254,40 @@ export default class GameRuntime {
         }
         if (this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent) {
             this.refs.heroProgressBar.node.parent.y = this.heroProgressLocalY + totalOffset;
+        }
+    }
+
+    private restoreHeroPresentation(): void {
+        if (this.refs.heroNode) {
+            this.refs.heroNode.stopAllActions();
+            this.refs.heroNode.active = true;
+            this.refs.heroNode.opacity = 255;
+        }
+
+        if (this.refs.heroSpineNode) {
+            this.refs.heroSpineNode.stopAllActions();
+            this.refs.heroSpineNode.active = true;
+            this.refs.heroSpineNode.opacity = 255;
+        }
+
+        const weaponNode = this.refs.bowSpineNode ? this.refs.bowSpineNode.parent : null;
+        if (weaponNode) {
+            weaponNode.stopAllActions();
+            weaponNode.active = true;
+            weaponNode.opacity = 255;
+            weaponNode.angle = this.weaponNodeBaseAngle;
+        }
+
+        if (this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent) {
+            this.refs.heroProgressBar.node.parent.stopAllActions();
+            this.refs.heroProgressBar.node.parent.active = true;
+            this.refs.heroProgressBar.node.parent.opacity = 255;
+        }
+
+        if (this.refs.sanNode) {
+            this.refs.sanNode.stopAllActions();
+            this.refs.sanNode.angle = this.sanNodeBaseAngle;
+            this.refs.sanNode.opacity = 255;
         }
     }
 
@@ -1317,36 +1520,20 @@ export default class GameRuntime {
         return spineNode ? spineNode.getComponent(sp.Skeleton) : null;
     }
 
-    private playSkeletonLoop(spine: sp.Skeleton, animationName: string | null): void {
-        if (!animationName) {
-            return;
-        }
-        spine.clearTracks();
-        spine.setAnimation(0, animationName, true);
-    }
-
-    private playSkeletonOnce(spine: sp.Skeleton, animationName: string, fallbackAnimation: string | null): void {
-        const onceAnimation = this.findSkeletonAnimationName(spine, [animationName]);
-        if (!onceAnimation) {
-            if (fallbackAnimation) {
-                this.playSkeletonLoop(spine, fallbackAnimation);
-            }
-            return;
-        }
-
-        spine.clearTracks();
-        spine.setAnimation(0, onceAnimation, false);
-        if (fallbackAnimation) {
-            spine.addAnimation(0, fallbackAnimation, true, 0);
-        }
+    private getBowSpine(): sp.Skeleton | null {
+        return this.refs.bowSpineNode ? this.refs.bowSpineNode.getComponent(sp.Skeleton) : null;
     }
 
     private getDefaultHeroLoopAnimation(spine: sp.Skeleton): string | null {
         return this.findSkeletonAnimationName(spine, [spine.defaultAnimation, "idle", "walk"]);
     }
 
+    private getDefaultBowLoopAnimation(spine: sp.Skeleton): string | null {
+        return this.findSkeletonAnimationName(spine, [spine.defaultAnimation, "idle"]);
+    }
+
     private getDefaultMonsterLoopAnimation(spine: sp.Skeleton): string | null {
-        return this.findSkeletonAnimationName(spine, [spine.defaultAnimation, "walk", "idle"]);
+        return this.getMonsterMoveLoopAnimation(spine);
     }
 
     private findSkeletonAnimationName(spine: sp.Skeleton, names: Array<string | null | undefined>): string | null {

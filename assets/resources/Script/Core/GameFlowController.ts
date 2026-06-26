@@ -11,6 +11,8 @@ import { ResultViewData } from "../UI/ResultView";
 import UIManager from "../UI/UIManager";
 
 export default class GameFlowController {
+    private static readonly FAIL_RESULT_DELAY = 1;
+
     private readonly runtime: GameRuntime;
     private readonly timeController = new TimeController();
     private readonly questionController: QuestionController;
@@ -37,11 +39,13 @@ export default class GameFlowController {
         this.prepareController = new PrepareController(runtime.context, this.questionController);
         this.battleController = new BattleController(runtime, {
             onNeedQuestion: (skillType, cost) => this.enterQuestionPause(skillType, cost),
+            onBattleFailSequenceStart: () => this.onBattleFailSequenceStart(),
             onBattleFinished: (isWin) => this.onBattleFinished(isWin),
         });
         this.uiManager = new UIManager(runtime.uiRoot, runtime.refs, target, {
             onStartBattle: () => this.startBattle(),
             onSkipPrepare: () => this.skipPrepareQuestions(),
+            onSpeedUp: () => this.cycleCarBaseSpeed(),
             onRoller: () => this.onSkillClick("roller"),
             onBomb: () => this.onSkillClick("bomb"),
             onQuestionOption: (index) => this.onQuestionOption(index),
@@ -114,6 +118,11 @@ export default class GameFlowController {
         this.prepareController.skipRemainingQuestions();
         this.uiManager.hideQuestion();
         this.refreshPrepareUi();
+    }
+
+    private cycleCarBaseSpeed(): void {
+        const currentSpeed = Math.max(100, Math.floor(GameConfig.car.baseSpeed));
+        GameConfig.car.baseSpeed = currentSpeed >= 500 ? 100 : currentSpeed + 100;
     }
 
     private onSkillClick(skillType: SkillType): void {
@@ -294,6 +303,16 @@ export default class GameFlowController {
         }
 
         this.startInterRoundAdvance();
+    }
+
+    private onBattleFailSequenceStart(): void {
+        this.timeController.pauseBattleTime();
+        this.uiManager.delay(GameFlowController.FAIL_RESULT_DELAY, () => {
+            if (this.runtime.context.playerHp > 0 || this.runtime.context.phase === GamePhase.Fail) {
+                return;
+            }
+            this.onBattleFinished(false);
+        });
     }
 
     private startInterRoundAdvance(): void {
@@ -501,7 +520,7 @@ export default class GameFlowController {
     }
 
     private getNextPrepareQuestionViewIndex(): number {
-        const availableViewIndices = [0, 2, 3, 4, 5];
+        const availableViewIndices = [5, 0, 4, 2, 3];
         const totalTypeCount = Math.max(1, availableViewIndices.length);
         const roundIndex = ((Math.max(1, this.runtime.context.currentRound) - 1) % totalTypeCount + totalTypeCount) % totalTypeCount;
         const targetViewIndex = availableViewIndices[roundIndex];

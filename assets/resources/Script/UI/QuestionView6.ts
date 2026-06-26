@@ -1,5 +1,5 @@
 import { CheckRightQuestionData } from "../Core/GameDefines";
-import { playResultStamp, QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
+import { QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
 
 const { ccclass, property } = cc._decorator;
 
@@ -16,10 +16,21 @@ export interface QuestionViewData {
 /** 判断题 */
 @ccclass
 export default class QuestionView6 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 200;
-    private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
-    private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
-    private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
+    private static readonly DISPLAY_OFFSET_X = 360;
+    private static readonly DISPLAY_OFFSET_Y = 60;
+
+    private static readonly LABEL_OUTLINE_DEFAULT = new cc.Color(154, 99, 50, 255);
+    private static readonly LABEL_OUTLINE_CORRECT = new cc.Color(18, 110, 140, 255);
+    private static readonly LABEL_OUTLINE_WRONG = new cc.Color(175, 49, 49, 255);
+
+    private static readonly BAR_DEFAULT_PATH = "Texture/questionUI/bar_3";
+    private static readonly BAR_CORRECT_PATH = "Texture/questionUI/bar_1";
+    private static readonly BAR_WRONG_PATH = "Texture/questionUI/bar_2";
+
+    private static barDefaultFrame: cc.SpriteFrame | null = null;
+    private static barCorrectFrame: cc.SpriteFrame | null = null;
+    private static barWrongFrame: cc.SpriteFrame | null = null;
+    private static framesLoadingStarted = false;
 
     @property(cc.Node)
     contentRoot: cc.Node = null;
@@ -42,19 +53,31 @@ export default class QuestionView6 extends cc.Component {
     @property(cc.Node)
     answer2Node: cc.Node = null;
 
-    @property(cc.Node)
-    resultNode: cc.Node = null;
+    @property(cc.Label)
+    answer1Label: cc.Label = null;
 
     @property(cc.Label)
-    resultLabel: cc.Label = null;
+    answer2Label: cc.Label = null;
 
-    private answer1Label: cc.Label | null = null;
-    private answer2Label: cc.Label | null = null;
+    @property(cc.Label)
+    saLabel: cc.Label = null;
+
+    @property(cc.Label)
+    sbLabel: cc.Label = null;
+
+    @property(cc.Node)
+    rightNode: cc.Node = null;
+
+    @property(cc.Node)
+    wrongNode: cc.Node = null;
+
+    private answerNodes: cc.Node[] = [];
+    private answerLabels: Array<cc.Label | null> = [];
+    private answerOutlineLabels: Array<cc.Label | null> = [];
     private onSelect: ((index: number) => void) | null = null;
     private inputLocked = false;
     private selectedIndex = -1;
     private correctAnswerIndex = 0;
-    private answerNodes: cc.Node[] = [];
     private isBattleMode = false;
 
     protected onLoad(): void {
@@ -63,10 +86,12 @@ export default class QuestionView6 extends cc.Component {
         this.leftLabel = this.leftLabel || this.findLabel("LabelLeft");
         this.aleartLabel = this.aleartLabel || this.findLabel("LabelAlert");
         this.quesLabel = this.quesLabel || this.findLabel("LabelQ");
-        this.answer1Label = this.findLabel("LabelAns1");
-        this.answer2Label = this.findLabel("LabelAns2");
-        this.resultLabel = this.resultLabel || this.findResultLabel();
+        this.saLabel = this.saLabel || this.findLabel("sA");
+        this.sbLabel = this.sbLabel || this.findLabel("sB");
         this.answerNodes = [this.answer1Node, this.answer2Node].filter((node): node is cc.Node => !!node);
+        this.answerLabels = [this.answer1Label, this.answer2Label];
+        this.answerOutlineLabels = [this.answer1Label, this.answer2Label, this.saLabel, this.sbLabel];
+        this.preloadAnswerFrames();
         this.hideImmediate();
     }
 
@@ -94,7 +119,7 @@ export default class QuestionView6 extends cc.Component {
         this.selectedIndex = -1;
         this.inputLocked = false;
         this.resetAnswerState();
-        resetResultState(this.resultNode);
+        this.resetMarkerState();
         this.setHeaderVisible(!this.isBattleMode);
 
         if (this.leftLabel) {
@@ -107,10 +132,16 @@ export default class QuestionView6 extends cc.Component {
             this.quesLabel.string = checkRight ? checkRight.prompt : (data.ques || "");
         }
         if (this.answer1Label) {
-            this.answer1Label.string = optionTexts && optionTexts[0] ? optionTexts[0] : (data.answer1 || "正确");
+            this.answer1Label.string = optionTexts && optionTexts[0] ? optionTexts[0] : (data.answer1 || "");
         }
         if (this.answer2Label) {
-            this.answer2Label.string = optionTexts && optionTexts[1] ? optionTexts[1] : (data.answer2 || "错误");
+            this.answer2Label.string = optionTexts && optionTexts[1] ? optionTexts[1] : (data.answer2 || "");
+        }
+        if (this.saLabel) {
+            this.saLabel.string = "A";
+        }
+        if (this.sbLabel) {
+            this.sbLabel.string = "B";
         }
     }
 
@@ -196,7 +227,7 @@ export default class QuestionView6 extends cc.Component {
             this.contentRoot.setPosition(this.getRestPosition());
         }
         this.resetAnswerState();
-        resetResultState(this.resultNode);
+        this.resetMarkerState();
         this.node.active = false;
     }
 
@@ -232,13 +263,6 @@ export default class QuestionView6 extends cc.Component {
         return node ? node.getComponent(cc.Label) : null;
     }
 
-    private findResultLabel(): cc.Label | null {
-        if (!this.resultNode || this.resultNode.childrenCount <= 0) {
-            return null;
-        }
-        return this.resultNode.children[0].getComponent(cc.Label);
-    }
-
     private bindAnswerNode(node: cc.Node | null, index: number): void {
         if (!node) {
             return;
@@ -259,24 +283,21 @@ export default class QuestionView6 extends cc.Component {
 
         this.inputLocked = true;
         this.selectedIndex = index;
+        this.resetAnswerState();
+        this.resetMarkerState();
 
         const isCorrect = this.selectedIndex === this.correctAnswerIndex;
         if (isCorrect) {
-            this.setNodeColor(this.answerNodes[this.selectedIndex], QuestionView6.COLOR_CORRECT);
+            this.applyAnswerVisualState(this.selectedIndex, "correct");
+            this.showMarkerAtAnswer(this.rightNode, this.correctAnswerIndex);
         } else {
-            this.setNodeColor(this.answerNodes[this.selectedIndex], QuestionView6.COLOR_WRONG);
+            this.applyAnswerVisualState(this.selectedIndex, "wrong");
+            this.showMarkerAtAnswer(this.wrongNode, this.selectedIndex);
             if (this.correctAnswerIndex >= 0 && this.correctAnswerIndex < this.answerNodes.length) {
-                this.setNodeColor(this.answerNodes[this.correctAnswerIndex], QuestionView6.COLOR_CORRECT);
+                this.applyAnswerVisualState(this.correctAnswerIndex, "correct");
+                this.showMarkerAtAnswer(this.rightNode, this.correctAnswerIndex);
             }
         }
-
-        playResultStamp(
-            this.resultNode,
-            this.resultLabel,
-            isCorrect,
-            QuestionView6.COLOR_CORRECT,
-            QuestionView6.COLOR_WRONG,
-        );
 
         this.node.stopAllActions();
         this.node.runAction(
@@ -302,15 +323,112 @@ export default class QuestionView6 extends cc.Component {
 
     private resetAnswerState(): void {
         for (let i = 0; i < this.answerNodes.length; i += 1) {
-            this.setNodeColor(this.answerNodes[i], QuestionView6.COLOR_DEFAULT);
+            this.applyAnswerVisualState(i, "default");
+        }
+        this.setOutlineColor(this.answerOutlineLabels, QuestionView6.LABEL_OUTLINE_DEFAULT);
+    }
+
+    private resetMarkerState(): void {
+        resetResultState(this.rightNode);
+        resetResultState(this.wrongNode);
+    }
+
+    private applyAnswerVisualState(index: number, state: "default" | "correct" | "wrong"): void {
+        const answerNode = this.answerNodes[index] || null;
+        if (!answerNode) {
+            return;
+        }
+
+        const sprite = answerNode.getComponent(cc.Sprite);
+        if (sprite) {
+            let spriteFrame = QuestionView6.barDefaultFrame;
+            if (state === "correct") {
+                spriteFrame = QuestionView6.barCorrectFrame || spriteFrame;
+            } else if (state === "wrong") {
+                spriteFrame = QuestionView6.barWrongFrame || spriteFrame;
+            }
+            if (spriteFrame) {
+                sprite.spriteFrame = spriteFrame;
+            }
+        }
+
+        const label = this.answerLabels[index];
+        const outline = label ? label.getComponent(cc.LabelOutline) : null;
+        if (outline) {
+            outline.color = this.getOutlineColorByState(state);
+        }
+
+        const shortLabel = index === 0 ? this.saLabel : this.sbLabel;
+        const shortOutline = shortLabel ? shortLabel.getComponent(cc.LabelOutline) : null;
+        if (shortOutline) {
+            shortOutline.color = this.getOutlineColorByState(state);
         }
     }
 
-    private setNodeColor(target: cc.Node | null, color: cc.Color): void {
-        if (!target) {
+    private getOutlineColorByState(state: "default" | "correct" | "wrong"): cc.Color {
+        if (state === "correct") {
+            return QuestionView6.LABEL_OUTLINE_CORRECT;
+        }
+        if (state === "wrong") {
+            return QuestionView6.LABEL_OUTLINE_WRONG;
+        }
+        return QuestionView6.LABEL_OUTLINE_DEFAULT;
+    }
+
+    private setOutlineColor(labels: Array<cc.Label | null>, color: cc.Color): void {
+        labels.forEach((label) => {
+            const outline = label ? label.getComponent(cc.LabelOutline) : null;
+            if (outline) {
+                outline.color = color;
+            }
+        });
+    }
+
+    private showMarkerAtAnswer(markerNode: cc.Node | null, answerIndex: number): void {
+        if (!markerNode || answerIndex < 0 || answerIndex >= this.answerNodes.length) {
             return;
         }
-        target.color = color;
+
+        const answerNode = this.answerNodes[answerIndex];
+        if (!answerNode) {
+            return;
+        }
+
+        markerNode.stopAllActions();
+        markerNode.active = true;
+        markerNode.opacity = 255;
+        markerNode.scale = 1;
+        markerNode.angle = 0;
+        markerNode.y = answerNode.y;
+    }
+
+    private preloadAnswerFrames(): void {
+        if (QuestionView6.framesLoadingStarted) {
+            return;
+        }
+        QuestionView6.framesLoadingStarted = true;
+
+        const resources = (cc as any).resources;
+        if (!resources || !resources.load) {
+            return;
+        }
+
+        resources.load(QuestionView6.BAR_DEFAULT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView6.barDefaultFrame = spriteFrame;
+                this.resetAnswerState();
+            }
+        });
+        resources.load(QuestionView6.BAR_CORRECT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView6.barCorrectFrame = spriteFrame;
+            }
+        });
+        resources.load(QuestionView6.BAR_WRONG_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView6.barWrongFrame = spriteFrame;
+            }
+        });
     }
 
     private getCorrectAnswerIndex(data: QuestionViewData): number {
@@ -359,6 +477,6 @@ export default class QuestionView6 extends cc.Component {
     }
 
     private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView6.DISPLAY_OFFSET_X, 0);
+        return cc.v2(QuestionView6.DISPLAY_OFFSET_X, QuestionView6.DISPLAY_OFFSET_Y);
     }
 }

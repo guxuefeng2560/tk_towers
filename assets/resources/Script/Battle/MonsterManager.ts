@@ -139,6 +139,7 @@ export default class MonsterManager {
             }
 
             previousXById[monster.id] = monster.node.x;
+            const previousY = monster.node.y;
             monster.contactCar = false;
             monster.contactCarIndex = -1;
             monster.contactHero = false;
@@ -196,6 +197,7 @@ export default class MonsterManager {
             }
 
             this.updateMonsterKnockback(monster, dt);
+            this.updateMonsterAnimationState(monster, previousXById[monster.id]);
             monster.node.zIndex = Math.round(-monster.node.y * 10);
 
             if (monster.node.x < this.runtime.cameraTrackX - GameConfig.designWidth) {
@@ -400,6 +402,26 @@ export default class MonsterManager {
         const damping = Math.exp(-MonsterManager.MONSTER_KNOCKBACK_DECAY * dt);
         monster.knockbackVelocityX *= damping;
         monster.knockbackVelocityY *= damping;
+    }
+
+    private updateMonsterAnimationState(monster: MonsterRuntime, previousX: number): void {
+        if (monster.dying || this.runtime.isMonsterAttackPlaying(monster.node)) {
+            return;
+        }
+
+        const movedX = monster.node.x - previousX;
+        const isKnockbackActive = Math.abs(monster.knockbackVelocityX) >= MonsterManager.MONSTER_KNOCKBACK_MIN_SPEED
+            || Math.abs(monster.knockbackVelocityY) >= MonsterManager.MONSTER_KNOCKBACK_MIN_SPEED;
+        const isStopped = monster.contactCar || monster.contactHero;
+        const isMovingBackward = movedX > 0.01 || isKnockbackActive;
+        const isMovingForward = movedX < -0.01;
+
+        if (isStopped || isMovingBackward || !isMovingForward) {
+            this.runtime.playMonsterIdle(monster.node);
+            return;
+        }
+
+        this.runtime.playMonsterMove(monster.node);
     }
 
     // ==================== 生成位置 ====================

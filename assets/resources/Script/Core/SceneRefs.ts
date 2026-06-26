@@ -7,13 +7,13 @@ export interface SceneRefs {
     flagNode: cc.Node | null;
     sanNode: cc.Node | null;
     heroSpineNode: cc.Node | null;
+    bowSpineNode: cc.Node | null;
     shootLineNode: cc.Node | null;
     carBaseNode: cc.Node | null;
     carNode: cc.Node | null;
     wheelNodes: cc.Node[];
     heroProgressBar: cc.ProgressBar | null;
     bossNode: cc.Node | null;
-    bossVariantNodes: cc.Node[];
     monsterRoot: cc.Node | null;
     bossProgressBar: cc.ProgressBar | null;
     bossHpLabel: cc.Label | null;

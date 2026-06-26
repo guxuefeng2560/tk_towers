@@ -27,6 +27,11 @@ export interface BattleViewData {
 }
 
 export default class BattleView {
+    private static readonly ACTION_BUTTON_WIDTH = 156;
+    private static readonly ACTION_BUTTON_HEIGHT = 56;
+    private static readonly ACTION_BUTTON_RADIUS = 18;
+    private static readonly SPEED_BUTTON_LABEL = "\u52a0\u901f+100";
+
     public readonly root: cc.Node;
 
     private readonly refs: SceneRefs;
@@ -34,16 +39,18 @@ export default class BattleView {
     private readonly sawButton: cc.Node | null;
     private readonly answer1Button: cc.Node | null;
     private readonly answer2Button: cc.Node | null;
+    private readonly speedButton: cc.Node | null;
     private active = false;
     private lastData: BattleViewData | null = null;
 
-    public constructor(refs: SceneRefs, target: any, onRoller: () => void, onBomb: () => void) {
+    public constructor(refs: SceneRefs, target: any, onRoller: () => void, onBomb: () => void, onSpeedUp: () => void) {
         this.refs = refs;
         this.root = refs.btnBattleLayout;
         this.bombButton = this.root ? this.root.getChildByName("BtnBomb") : null;
         this.sawButton = this.root ? this.root.getChildByName("BtnSawtooth") : null;
         this.answer1Button = refs.btnAnswer1;
         this.answer2Button = refs.btnAnswer2;
+        this.speedButton = this.createSpeedButton(target, onSpeedUp);
         this.disableOverlayButtonInteraction(this.answer1Button);
         this.disableOverlayButtonInteraction(this.answer2Button);
 
@@ -68,11 +75,13 @@ export default class BattleView {
             this.setNodeGroupActive(this.refs.nodeBattleProgress, false);
             this.setNodeGroupActive(this.answer1Button, false);
             this.setNodeGroupActive(this.answer2Button, false);
+            this.setNodeGroupActive(this.speedButton, false);
             this.lastData = null;
             return;
         }
         this.setNodeGroupActive(this.answer1Button, false);
         this.setNodeGroupActive(this.answer2Button, false);
+        this.updateSpeedButtonPosition();
     }
 
     public render(data: BattleViewData): void {
@@ -157,6 +166,8 @@ export default class BattleView {
         // this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSkillSwitch && sawSkillVisible && rollerEnergyEnough);
         this.setNodeGroupActiveIfChanged(this.answer1Button, showSkillSwitch && !bombEnergyEnough);
         this.setNodeGroupActiveIfChanged(this.answer2Button, showSkillSwitch && sawSkillVisible && !rollerEnergyEnough);
+        this.setNodeGroupActiveIfChanged(this.speedButton, data.phase === GamePhase.Battle || data.phase === GamePhase.Boss || data.phase === GamePhase.NormalPause);
+        this.updateSpeedButtonPosition();
 
         if (this.bombButton) {
             const bombOpacity = data.canUseBomb ? 255 : 135;
@@ -221,6 +232,61 @@ export default class BattleView {
             button.enabled = false;
             button.interactable = false;
         }
+    }
+
+    private createSpeedButton(target: any, onSpeedUp: () => void): cc.Node | null {
+        if (!this.refs.root) {
+            return null;
+        }
+
+        const buttonNode = new cc.Node("BtnBattleSpeedUp");
+        buttonNode.parent = this.refs.root;
+        buttonNode.setContentSize(BattleView.ACTION_BUTTON_WIDTH, BattleView.ACTION_BUTTON_HEIGHT);
+        buttonNode.zIndex = 650;
+
+        const graphics = buttonNode.addComponent(cc.Graphics);
+        graphics.fillColor = new cc.Color(40, 52, 76, 220);
+        graphics.roundRect(
+            -BattleView.ACTION_BUTTON_WIDTH * 0.5,
+            -BattleView.ACTION_BUTTON_HEIGHT * 0.5,
+            BattleView.ACTION_BUTTON_WIDTH,
+            BattleView.ACTION_BUTTON_HEIGHT,
+            BattleView.ACTION_BUTTON_RADIUS,
+        );
+        graphics.fill();
+        graphics.lineWidth = 2;
+        graphics.strokeColor = new cc.Color(255, 232, 180, 255);
+        graphics.roundRect(
+            -BattleView.ACTION_BUTTON_WIDTH * 0.5,
+            -BattleView.ACTION_BUTTON_HEIGHT * 0.5,
+            BattleView.ACTION_BUTTON_WIDTH,
+            BattleView.ACTION_BUTTON_HEIGHT,
+            BattleView.ACTION_BUTTON_RADIUS,
+        );
+        graphics.stroke();
+
+        const labelNode = new cc.Node("Label");
+        labelNode.parent = buttonNode;
+        const label = labelNode.addComponent(cc.Label);
+        label.string = BattleView.SPEED_BUTTON_LABEL;
+        label.fontSize = 24;
+        label.lineHeight = 28;
+        label.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
+        label.verticalAlign = cc.Label.VerticalAlign.CENTER;
+        labelNode.color = new cc.Color(255, 244, 215, 255);
+
+        buttonNode.on(cc.Node.EventType.TOUCH_END, onSpeedUp, target);
+        buttonNode.active = false;
+        return buttonNode;
+    }
+
+    private updateSpeedButtonPosition(): void {
+        if (!this.speedButton) {
+            return;
+        }
+
+        const size = cc.winSize;
+        this.speedButton.setPosition(size.width / 2 - 110, -size.height / 2 + 56);
     }
 
     private updateBossIcons(completedRounds: number): void {

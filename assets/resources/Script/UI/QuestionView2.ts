@@ -17,7 +17,8 @@ export interface QuestionViewData {
 /** 看图选择 */
 @ccclass
 export default class QuestionView2 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 200;
+    private static readonly DISPLAY_OFFSET_X = 360;
+    private static readonly DISPLAY_OFFSET_Y = 60;
     private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
     private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
     private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
@@ -117,13 +118,13 @@ export default class QuestionView2 extends cc.Component {
             this.aleartLabel.string = data.aleart;
         }
         if (this.answer1Label) {
-            this.answer1Label.string = `A. ${optionTexts && optionTexts[0] ? optionTexts[0] : data.answer1}`;
+            this.answer1Label.string = `${optionTexts && optionTexts[0] ? optionTexts[0] : data.answer1}`;
         }
         if (this.answer2Label) {
-            this.answer2Label.string = `B. ${optionTexts && optionTexts[1] ? optionTexts[1] : data.answer2}`;
+            this.answer2Label.string = `${optionTexts && optionTexts[1] ? optionTexts[1] : data.answer2}`;
         }
         if (this.answer3Label) {
-            this.answer3Label.string = `C. ${optionTexts && optionTexts[2] ? optionTexts[2] : (data.answer3 || "")}`;
+            this.answer3Label.string = `${optionTexts && optionTexts[2] ? optionTexts[2] : (data.answer3 || "")}`;
         }
         this.loadQuestionImage(imageChoice ? imageChoice.imagePath : "");
     }
@@ -397,6 +398,6 @@ export default class QuestionView2 extends cc.Component {
     }
 
     private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView2.DISPLAY_OFFSET_X, 0);
+        return cc.v2(QuestionView2.DISPLAY_OFFSET_X, QuestionView2.DISPLAY_OFFSET_Y);
     }
 }

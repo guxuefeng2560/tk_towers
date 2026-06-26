@@ -28,6 +28,10 @@ export interface PrepareViewData {
 export default class PrepareView {
     private static readonly START_BUTTON_MIN_SCALE = 0.95;
     private static readonly START_BUTTON_MAX_SCALE = 1.05;
+    private static readonly ACTION_BUTTON_WIDTH = 156;
+    private static readonly ACTION_BUTTON_HEIGHT = 56;
+    private static readonly ACTION_BUTTON_RADIUS = 18;
+    private static readonly ACTION_BUTTON_GAP = 20;
     private static readonly SKIP_BUTTON_LABEL = "\u8df3\u8fc7\u7b54\u9898";
 
     public readonly root: cc.Node | null;
@@ -40,7 +44,12 @@ export default class PrepareView {
     private codeFloatLabel: cc.Label | null = null;
     private active = false;
 
-    public constructor(refs: SceneRefs, target: any, onStartBattle: () => void, onSkipPrepare: () => void) {
+    public constructor(
+        refs: SceneRefs,
+        target: any,
+        onStartBattle: () => void,
+        onSkipPrepare: () => void,
+    ) {
         this.refs = refs;
         this.root = refs.btnUpLayout;
         this.startButton = refs.btnStart;
@@ -333,37 +342,57 @@ export default class PrepareView {
     }
 
     private createSkipButton(target: any, onSkipPrepare: () => void): cc.Node | null {
+        return this.createActionButton("BtnSkipPrepare", PrepareView.SKIP_BUTTON_LABEL, target, onSkipPrepare);
+    }
+
+    private createActionButton(
+        nodeName: string,
+        labelText: string,
+        target: any,
+        onClick: () => void,
+    ): cc.Node | null {
         if (!this.refs.root) {
             return null;
         }
 
-        const buttonNode = new cc.Node("BtnSkipPrepare");
+        const buttonNode = new cc.Node(nodeName);
         buttonNode.parent = this.refs.root;
-        buttonNode.setContentSize(156, 56);
+        buttonNode.setContentSize(PrepareView.ACTION_BUTTON_WIDTH, PrepareView.ACTION_BUTTON_HEIGHT);
         buttonNode.zIndex = 650;
 
         const graphics = buttonNode.addComponent(cc.Graphics);
         graphics.fillColor = new cc.Color(40, 52, 76, 220);
-        graphics.roundRect(-78, -28, 156, 56, 18);
+        graphics.roundRect(
+            -PrepareView.ACTION_BUTTON_WIDTH * 0.5,
+            -PrepareView.ACTION_BUTTON_HEIGHT * 0.5,
+            PrepareView.ACTION_BUTTON_WIDTH,
+            PrepareView.ACTION_BUTTON_HEIGHT,
+            PrepareView.ACTION_BUTTON_RADIUS,
+        );
         graphics.fill();
         graphics.lineWidth = 2;
         graphics.strokeColor = new cc.Color(255, 232, 180, 255);
-        graphics.roundRect(-78, -28, 156, 56, 18);
+        graphics.roundRect(
+            -PrepareView.ACTION_BUTTON_WIDTH * 0.5,
+            -PrepareView.ACTION_BUTTON_HEIGHT * 0.5,
+            PrepareView.ACTION_BUTTON_WIDTH,
+            PrepareView.ACTION_BUTTON_HEIGHT,
+            PrepareView.ACTION_BUTTON_RADIUS,
+        );
         graphics.stroke();
 
         const labelNode = new cc.Node("Label");
         labelNode.parent = buttonNode;
         const label = labelNode.addComponent(cc.Label);
-        label.string = PrepareView.SKIP_BUTTON_LABEL;
+        label.string = labelText;
         label.fontSize = 24;
         label.lineHeight = 28;
         label.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
         label.verticalAlign = cc.Label.VerticalAlign.CENTER;
         labelNode.color = new cc.Color(255, 244, 215, 255);
 
-        buttonNode.on(cc.Node.EventType.TOUCH_END, onSkipPrepare, target);
+        buttonNode.on(cc.Node.EventType.TOUCH_END, onClick, target);
         buttonNode.active = false;
-        this.updateSkipButtonPosition(buttonNode);
         return buttonNode;
     }
 
