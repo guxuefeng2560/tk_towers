@@ -120,6 +120,7 @@ export default class MonsterManager {
     public updateMonsters(dt: number): void {
         const carRect = this.callbacks.getCarRect();
         const heroRect = this.callbacks.getHeroRect();
+        const heroCanCollide = this.runtime.context.playerHp > 0;
         const contactCarFrontX = carRect.x + carRect.width / 2 - MonsterManager.MONSTER_CAR_CONTACT_SHRINK;
         const previousXById: Record<number, number> = {};
         const preUpdateCaches = this.buildMonsterFrameCaches();
@@ -171,7 +172,8 @@ export default class MonsterManager {
             const reachesHeroFront = monster.node.x - GameConfig.monster.width / 2 <= heroContactFrontX;
             const carContact = this.callbacks.getContactCarHit(monsterRect, monster.node.y + monster.node.parent.y);
             const hitsCar = !!carContact;
-            const hitsHero = rectIntersects(monsterRect, heroRect) || (reachesHeroFront && this.callbacks.rectOverlapsY(monsterRect, heroRect));
+            const hitsHero = heroCanCollide
+                && (rectIntersects(monsterRect, heroRect) || (reachesHeroFront && this.callbacks.rectOverlapsY(monsterRect, heroRect)));
             const shouldAttackHero = !hitsCar && hitsHero;
             if (shouldAttackHero) {
                 monster.contactHero = true;
@@ -437,14 +439,14 @@ export default class MonsterManager {
             return cc.v2(this.getRightScreenMonsterSpawnX(), laneY);
         }
         const bossCenter = this.runtime.getBossCenterWorldPosition();
-        return cc.v2(bossCenter.x, laneY);
+        return cc.v2(bossCenter.x-80, laneY);
     }
 
     private getBossCenterMonsterSpawnPosition(): cc.Vec2 {
         const laneIndex = this.getRandomMonsterLaneIndex();
         const laneY = this.getMonsterLaneY(laneIndex);
         const bossCenter = this.runtime.getBossCenterWorldPosition();
-        return cc.v2(bossCenter.x, laneY);
+        return cc.v2(bossCenter.x-80, laneY);
     }
 
     private canSpawnBossMonster(): boolean {

@@ -94,6 +94,9 @@ export default class BattleController {
     }
 
     public tryUseSkill(skillType: SkillType): void {
+        if (this.runtime.context.playerHp <= 0) {
+            return;
+        }
         const result = this.skillController.tryUseSkill(skillType, (monsterId, damage, center) => {
             this.monsterManager.damageMonsterById(monsterId, damage, "bomb");
             this.monsterManager.applyBombKnockback(monsterId, center);
@@ -108,6 +111,9 @@ export default class BattleController {
     }
 
     public tryUseSkillAfterQuestion(skillType: SkillType): boolean {
+        if (this.runtime.context.playerHp <= 0) {
+            return false;
+        }
         return this.skillController.useSkillWithoutEnergyCost(
             skillType,
             (monsterId, damage, center) => {

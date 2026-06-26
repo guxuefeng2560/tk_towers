@@ -46,7 +46,7 @@ export default class BulletManager {
      * 自动射击逻辑
      */
     private updateAutoShooting(dt: number): void {
-        if (!this.runtime.refs.heroNode) {
+        if (!this.runtime.refs.heroNode || this.runtime.context.playerHp <= 0) {
             return;
         }
 

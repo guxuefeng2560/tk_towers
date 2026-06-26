@@ -21,7 +21,7 @@ export const GameConfig = {
 
     player: {
         maxHp: 1800,
-        baseAttack: 35,
+        baseAttack: 350,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,
@@ -82,6 +82,7 @@ export const GameConfig = {
         maxMonsterCount: 40,
         maxVisibleMonsterCount: 18,
         entranceScreenPadding: 160,
+        stopScreenOffsetX: 150,
         width: 160,
         height: 180,
     },

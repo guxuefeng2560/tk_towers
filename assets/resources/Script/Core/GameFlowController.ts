@@ -78,6 +78,7 @@ export default class GameFlowController {
     public resetRun(fullProgressReset: boolean): void {
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow();
+        this.uiManager.renderResult(null);
 
         if (fullProgressReset) {
             this.runtime.context.resetAllProgress();
@@ -306,7 +307,6 @@ export default class GameFlowController {
     }
 
     private onBattleFailSequenceStart(): void {
-        this.timeController.pauseBattleTime();
         this.uiManager.delay(GameFlowController.FAIL_RESULT_DELAY, () => {
             if (this.runtime.context.playerHp > 0 || this.runtime.context.phase === GamePhase.Fail) {
                 return;

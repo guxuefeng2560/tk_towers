@@ -628,7 +628,7 @@ export default class GameRuntime {
         bossNode.x = leftEdgeX + bossNode.anchorX * this.getNodeLocalDisplayWidth(bossNode);
         bossNode.y = this.bossLocalY;
         bossNode.active = true;
-        this.bossEntranceTargetCameraX = this.getBossCenterWorldPosition().x;
+        this.bossEntranceTargetCameraX = this.getBossCenterWorldPosition().x - GameConfig.boss.stopScreenOffsetX;
         this.bossEntranceActive = true;
     }
 
