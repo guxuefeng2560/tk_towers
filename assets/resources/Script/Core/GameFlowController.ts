@@ -235,7 +235,7 @@ export default class GameFlowController {
                 return;
             }
 
-            const reopenDelay = result.upgradeGranted && result.taskCompleted ? 1 : 0.5;
+            const reopenDelay = result.upgradeGranted && result.taskCompleted ? 0.3 : 0.1;
             this.queuePrepareQuestion(reopenDelay);
         });
     }
@@ -250,8 +250,9 @@ export default class GameFlowController {
             }
 
             this.prepareFlowLocked = false;
-            this.refreshPrepareUi();
-            this.showPrepareQuestion();
+            this.refreshPrepareUi(undefined, () => {
+                this.showPrepareQuestion();
+            });
         });
     }
 
@@ -410,9 +411,9 @@ export default class GameFlowController {
         }
     }
 
-    private refreshPrepareUi(visibleTaskKeyOverride?: PrepareTaskKey | null): void {
+    private refreshPrepareUi(visibleTaskKeyOverride?: PrepareTaskKey | null, onTaskVisibilitySettled?: () => void): void {
         this.runtime.refreshPreparePresentation();
-        this.uiManager.renderPrepare(this.prepareController.getViewData(visibleTaskKeyOverride));
+        this.uiManager.renderPrepare(this.prepareController.getViewData(visibleTaskKeyOverride), onTaskVisibilitySettled);
     }
 
     private refreshBattleAndResultUi(): void {

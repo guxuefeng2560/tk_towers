@@ -85,7 +85,6 @@ export default class BattleController {
 
     public updateVisuals(): void {
         this.cameraFollow.update();
-        this.carManager.updateSawVisuals();
         if (this.runtime.refs.bossNode) {
             const keepBossVisibleInQuestionPause = this.runtime.context.phase === GamePhase.QuestionPause
                 && this.runtime.context.lastBattlePhaseBeforeQuestionPause === GamePhase.Boss;
@@ -203,8 +202,11 @@ export default class BattleController {
         this.runtime.updateActorPlacement();
         this.runtime.bossHp = GameConfig.boss.hp;
         this.runtime.bossSpawnTimer = 0;
-        this.runtime.bossPreSpawnRemaining = GameConfig.monster.bossPreSpawnCount;
-        this.monsterManager.spawnBossPreWave();
+        const isFinalBossRound = this.runtime.context.currentRound >= GameConfig.campaign.totalRounds;
+        this.runtime.bossPreSpawnRemaining = isFinalBossRound ? GameConfig.monster.bossPreSpawnCount : 0;
+        if (isFinalBossRound) {
+            this.monsterManager.spawnBossPreWave();
+        }
         this.runtime.placeBossAtScreenRight();
         this.runtime.context.phase = GamePhase.Boss;
         const bossCenter = this.runtime.getBossCenterWorldPosition();

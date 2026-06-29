@@ -1,6 +1,7 @@
 import { GameConfig } from "../Core/GameConfig";
 import { GamePhase } from "../Core/GameDefines";
 import GameRuntime from "../Core/GameRuntime";
+import CarPrefab from "./CarPrefab";
 import AudioManager from "../Framework/audio/TD_AudioManager";
 import { AudioID } from "../global/TD_Constants";
 import { distance, rectIntersects } from "../Util/MathUtil";
@@ -58,6 +59,13 @@ export default class CarManager {
             const damage = attackCarIndex >= 0
                 ? this.runtime.context.getCarAttack(attackCarIndex)
                 : this.runtime.context.sawCarAttack;
+            const sawNode = attackCarIndex >= 0
+                ? this.runtime.getSawNodeByIndex(attackCarIndex)
+                : this.runtime.getSawNode();
+            const sawView = sawNode && sawNode.parent ? sawNode.parent.getComponent(CarPrefab) : null;
+            if (sawView) {
+                sawView.playSawHitFeedback();
+            }
             this.callbacks.onDamageMonster(monster.id, damage);
         });
     }
@@ -263,20 +271,4 @@ export default class CarManager {
     /**
      * 锯齿视觉旋转：根据车辆解锁状态显示并启动锯齿旋转动画
      */
-    public updateSawVisuals(): void {
-        this.runtime.getActiveCarViews().forEach((carView) => {
-            if (!carView || !carView.sawNode || !cc.isValid(carView.sawNode)) {
-                return;
-            }
-            const carIndex = this.runtime.getCarIndexByView(carView);
-            const sawNode = carView.sawNode;
-            const sawVisible = carView.node.active
-                && carIndex >= 0
-                && this.runtime.isRollerSkillVisualReady(carIndex);
-            sawNode.active = sawVisible;
-            sawNode.stopAllActions();
-            sawNode.angle = 0;
-            (sawNode as any).__spinStarted = false;
-        });
-    }
 }

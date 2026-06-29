@@ -1488,9 +1488,14 @@ export default class GameRuntime {
         const shouldShowCar = this.context.sawCarUnlocked && this.context.sawCarAlive;
         this.ensureCarInstances(this.context.sawCarCount);
         const aliveIndices = shouldShowCar ? this.context.getAliveCarIndices() : [];
+        const aliveIndexSet = new Set<number>(aliveIndices);
+        const alivePositionByIndex: Record<number, number> = {};
+        aliveIndices.forEach((carIndex, alivePosition) => {
+            alivePositionByIndex[carIndex] = alivePosition;
+        });
 
         this.carInstanceNodes.forEach((node, index) => {
-            const alivePosition = aliveIndices.indexOf(index);
+            const alivePosition = alivePositionByIndex[index];
             const isVisible = alivePosition >= 0;
             node.active = isVisible;
             if (!isVisible) {
@@ -1500,7 +1505,7 @@ export default class GameRuntime {
         });
 
         this.carViews.forEach((view, index) => {
-            const isVisible = aliveIndices.indexOf(index) >= 0;
+            const isVisible = aliveIndexSet.has(index);
             view.setBodySpriteFrame(this.getCarBodySpriteFrame(index));
             view.setCarVisible(isVisible);
             view.setSawVisible(isVisible && this.isRollerSkillVisualReady(index));

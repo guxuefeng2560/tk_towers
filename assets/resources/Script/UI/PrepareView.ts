@@ -34,6 +34,9 @@ export default class PrepareView {
     private static readonly ACTION_BUTTON_RADIUS = 18;
     private static readonly ACTION_BUTTON_GAP = 20;
     private static readonly SKIP_BUTTON_LABEL = "\u8df3\u8fc7\u7b54\u9898";
+    private static readonly TASK_NODE_SHOW_SCALE = 1;
+    private static readonly TASK_NODE_HIDE_SCALE = 0.2;
+    private static readonly TASK_NODE_ANIM_DURATION = 0.12;
 
     public readonly root: cc.Node | null;
 
@@ -44,6 +47,9 @@ export default class PrepareView {
     private readonly skipButton: cc.Node | null;
     private codeFloatLabel: cc.Label | null = null;
     private active = false;
+    private taskVisibilityInitialized = false;
+    private currentVisibleTaskKey: PrepareTaskKey | null = null;
+    private taskTransitionToken = 0;
 
     public constructor(
         refs: SceneRefs,
@@ -86,7 +92,7 @@ export default class PrepareView {
             this.root.active = active;
         }
         if (!active) {
-            this.setTaskNodesVisible(null);
+            this.resetTaskVisibility(null);
         }
         if (this.startButton) {
             this.stopStartButtonBreathing();
@@ -103,10 +109,18 @@ export default class PrepareView {
         }
     }
 
-    public render(data: PrepareViewData): void {
+    public render(data: PrepareViewData, onTaskVisibilitySettled?: () => void): void {
         const showPrepareLayout = this.active && !data.showStartButton;
         if (this.root) {
             this.root.active = showPrepareLayout;
+        }
+        if (showPrepareLayout) {
+            this.syncTaskVisibility(data.visibleTaskKey, onTaskVisibilitySettled);
+        } else {
+            this.resetTaskVisibility(null);
+            if (onTaskVisibilitySettled) {
+                onTaskVisibilitySettled();
+            }
         }
         if (this.refs.btnCode) {
             this.refs.btnCode.active = true;
@@ -135,10 +149,6 @@ export default class PrepareView {
         data.tasks.forEach((task) => {
             this.updateTaskNode(task);
         });
-
-        if (!showPrepareLayout) {
-            this.setTaskNodesVisible(null);
-        }
 
         if (this.startButton) {
             this.startButton.active = this.active && data.showStartButton;
@@ -210,8 +220,6 @@ export default class PrepareView {
         if (!node) {
             return;
         }
-
-        node.active = this.active && task.visible;
         // node.opacity = task.visible ? 255 : (task.completed ? 220 : 180);
         // node.color = task.current
         //     ? new cc.Color(255, 245, 190, 255)
@@ -222,10 +230,10 @@ export default class PrepareView {
         }
 
         if (task.key === PrepareTaskKey.Hurt) {
-            this.renderPointGroup(this.refs.hurtPointNodes, task.progress, task.visible);
+            this.renderPointGroup(this.refs.hurtPointNodes, task.progress, node.active);
         }
         if (task.key === PrepareTaskKey.Hp) {
-            this.renderPointGroup(this.refs.hpPointNodes, task.progress, task.visible);
+            this.renderPointGroup(this.refs.hpPointNodes, task.progress, node.active);
         }
     }
 
@@ -255,17 +263,126 @@ export default class PrepareView {
         return 100;
     }
 
-    private setTaskNodesVisible(visibleTaskKey: PrepareTaskKey | null): void {
+    private resetTaskVisibility(visibleTaskKey: PrepareTaskKey | null): void {
+        this.taskTransitionToken += 1;
+        this.currentVisibleTaskKey = visibleTaskKey;
+        this.taskVisibilityInitialized = false;
         Object.keys(this.taskNodes).forEach((key) => {
             const node = this.taskNodes[key as PrepareTaskKey];
             if (node) {
-                node.active = !!visibleTaskKey && key === visibleTaskKey;
+                this.setTaskNodeVisibleImmediate(node, !!visibleTaskKey && key === visibleTaskKey);
             }
         });
         if (!visibleTaskKey) {
             this.refs.hurtPointNodes.forEach((node) => { node.active = false; });
             this.refs.hpPointNodes.forEach((node) => { node.active = false; });
         }
+    }
+
+    private syncTaskVisibility(visibleTaskKey: PrepareTaskKey | null, onComplete?: () => void): void {
+        if (!this.taskVisibilityInitialized) {
+            this.taskVisibilityInitialized = true;
+            this.currentVisibleTaskKey = visibleTaskKey;
+            Object.keys(this.taskNodes).forEach((key) => {
+                const node = this.taskNodes[key as PrepareTaskKey];
+                if (node) {
+                    this.setTaskNodeVisibleImmediate(node, !!visibleTaskKey && key === visibleTaskKey);
+                }
+            });
+            if (onComplete) {
+                onComplete();
+            }
+            return;
+        }
+
+        if (this.currentVisibleTaskKey === visibleTaskKey) {
+            if (onComplete) {
+                onComplete();
+            }
+            return;
+        }
+
+        this.taskTransitionToken += 1;
+        const transitionToken = this.taskTransitionToken;
+        const previousTaskKey = this.currentVisibleTaskKey;
+        const previousNode = previousTaskKey ? this.taskNodes[previousTaskKey] : null;
+        const nextNode = visibleTaskKey ? this.taskNodes[visibleTaskKey] : null;
+
+        this.currentVisibleTaskKey = visibleTaskKey;
+
+        if (!previousNode || !previousNode.active) {
+            if (nextNode) {
+                this.showTaskNodeAnimated(nextNode, onComplete);
+                return;
+            }
+            if (onComplete) {
+                onComplete();
+            }
+            return;
+        }
+
+        this.hideTaskNodeAnimated(previousNode, () => {
+            if (transitionToken !== this.taskTransitionToken) {
+                return;
+            }
+            if (!nextNode) {
+                if (onComplete) {
+                    onComplete();
+                }
+                return;
+            }
+            this.showTaskNodeAnimated(nextNode, onComplete);
+        });
+    }
+
+    private setTaskNodeVisibleImmediate(node: cc.Node, visible: boolean): void {
+        node.stopAllActions();
+        node.active = visible;
+        node.opacity = visible ? 255 : 0;
+        node.scale = PrepareView.TASK_NODE_SHOW_SCALE;
+    }
+
+    private showTaskNodeAnimated(node: cc.Node, onComplete?: () => void): void {
+        node.stopAllActions();
+        node.active = true;
+        node.opacity = 255;
+        node.scale = PrepareView.TASK_NODE_HIDE_SCALE;
+        node.runAction(
+            cc.sequence(
+                cc.scaleTo(
+                    PrepareView.TASK_NODE_ANIM_DURATION,
+                    PrepareView.TASK_NODE_SHOW_SCALE,
+                ).easing(cc.easeBackOut()),
+                cc.callFunc(() => {
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }),
+            ),
+        );
+    }
+
+    private hideTaskNodeAnimated(node: cc.Node, onComplete: () => void): void {
+        node.stopAllActions();
+        if (!node.active) {
+            node.scale = PrepareView.TASK_NODE_SHOW_SCALE;
+            onComplete();
+            return;
+        }
+        node.runAction(
+            cc.sequence(
+                cc.scaleTo(
+                    PrepareView.TASK_NODE_ANIM_DURATION,
+                    PrepareView.TASK_NODE_HIDE_SCALE,
+                ).easing(cc.easeSineIn()),
+                cc.callFunc(() => {
+                    node.active = false;
+                    node.opacity = 0;
+                    node.scale = PrepareView.TASK_NODE_SHOW_SCALE;
+                    onComplete();
+                }),
+            ),
+        );
     }
 
     private renderPointGroup(nodes: cc.Node[], activeCount: number, groupVisible: boolean): void {

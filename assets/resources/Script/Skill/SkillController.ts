@@ -80,7 +80,7 @@ export default class SkillController {
 
             const sawPosition = this.runtime.getSawWorldPositionByIndex(roller.sourceCarIndex);
             roller.node.x += GameConfig.skill.roller.speed * dt;
-            roller.node.y = sawPosition.y - 10;
+            roller.node.y = sawPosition.y;// - 10;
             // roller.node.angle -= 720 * dt;
 
             const rollerRect = this.runtime.makeRect(

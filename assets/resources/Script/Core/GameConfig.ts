@@ -21,7 +21,7 @@ export const GameConfig = {
 
     player: {
         maxHp: 1800,
-        baseAttack: 35,
+        baseAttack: 350,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,
@@ -91,7 +91,7 @@ export const GameConfig = {
         roller: {
             cost: 4,
             cooldown: 0.5,
-            hideDuration: 2,
+            hideDuration: 0.2,
             speed: 1000,
             damage: 600,
             size: 56,

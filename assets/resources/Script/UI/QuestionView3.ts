@@ -1,5 +1,6 @@
 import { MatchingQuestionData } from "../Core/GameDefines";
 import { QUESTION_RESULT_DELAY } from "./QuestionResultStamp";
+import { closeQuestionViewTo, openQuestionViewFrom } from "./QuestionViewMotion";
 
 const { ccclass, property } = cc._decorator;
 
@@ -124,74 +125,11 @@ export default class QuestionView3 extends cc.Component {
     }
 
     public openFrom(anchorNode: cc.Node | null, data: QuestionViewData): void {
-        this.render(data);
-        this.node.stopAllActions();
-        if (this.contentRoot) {
-            this.contentRoot.stopAllActions();
-        }
-
-        this.ensureOverlaySize();
-        this.node.active = true;
-        this.inputLocked = true;
-
-        const startPosition = this.getAnchorPosition(anchorNode);
-        const restPosition = this.getRestPosition();
-        if (this.contentRoot) {
-            this.contentRoot.opacity = 0;
-            this.contentRoot.scale = anchorNode ? 0.25 : 0.8;
-            this.contentRoot.setPosition(startPosition);
-            this.contentRoot.runAction(
-                cc.sequence(
-                    cc.spawn(
-                        cc.fadeIn(0.18),
-                        cc.scaleTo(0.2, 1).easing(cc.easeBackOut()),
-                        cc.moveTo(0.2, restPosition).easing(cc.easeSineOut()),
-                    ),
-                    cc.callFunc(() => {
-                        this.inputLocked = false;
-                    }),
-                ),
-            );
-        } else {
-            this.inputLocked = false;
-        }
+        openQuestionViewFrom(this as any, anchorNode, data);
     }
 
     public closeTo(anchorNode: cc.Node | null, onComplete?: () => void): void {
-        if (!this.node.active) {
-            if (onComplete) {
-                onComplete();
-            }
-            return;
-        }
-
-        this.inputLocked = true;
-        const targetPosition = this.getAnchorPosition(anchorNode);
-
-        if (this.contentRoot) {
-            this.contentRoot.stopAllActions();
-            this.contentRoot.runAction(
-                cc.sequence(
-                    cc.spawn(
-                        cc.fadeOut(0.18),
-                        cc.scaleTo(0.18, anchorNode ? 0.22 : 0.8).easing(cc.easeSineIn()),
-                        cc.moveTo(0.18, targetPosition).easing(cc.easeSineIn()),
-                    ),
-                    cc.callFunc(() => {
-                        this.hideImmediate();
-                        if (onComplete) {
-                            onComplete();
-                        }
-                    }),
-                ),
-            );
-            return;
-        }
-
-        this.hideImmediate();
-        if (onComplete) {
-            onComplete();
-        }
+        closeQuestionViewTo(this as any, anchorNode, onComplete);
     }
 
     public hideImmediate(): void {

@@ -55,8 +55,8 @@ export default class UIManager {
         }
     }
 
-    public renderPrepare(data: PrepareViewData): void {
-        this.prepareView.render(data);
+    public renderPrepare(data: PrepareViewData, onTaskVisibilitySettled?: () => void): void {
+        this.prepareView.render(data, onTaskVisibilitySettled);
     }
 
     public renderBattle(data: BattleViewData): void {
