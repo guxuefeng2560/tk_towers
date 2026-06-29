@@ -1,5 +1,6 @@
 import { PrepareTaskKey } from "../Core/GameDefines";
 import { SceneRefs } from "../Core/SceneRefs";
+import { formatCompactK } from "../Util/NumberFormatUtil";
 
 export interface PrepareTaskViewState {
     key: PrepareTaskKey;
@@ -120,7 +121,7 @@ export default class PrepareView {
             this.refs.labelHurt.string = data.hurtValueText;
         }
         if (this.refs.labelHp) {
-            this.refs.labelHp.string = data.hpValueText;
+            this.refs.labelHp.string = formatCompactK(data.hpValueText);
         }
         if (this.refs.labelEnergyRate) {
             this.refs.labelEnergyRate.string = data.energyRateText;

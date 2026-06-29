@@ -132,6 +132,7 @@ export default class CarManager {
             const carPosition = this.runtime.getCarWorldPositionByIndex(targetCarIndex);
             this.runtime.spawnFloatText(carPosition.x, carPosition.y + 45, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
             const damageResult = this.runtime.context.damageCar(targetCarIndex, damage);
+            this.runtime.playCarShieldHitEffect(targetCarIndex);
             if (damageResult.destroyed) {
                 if (this.runtime.context.sawCarAlive) {
                     this.runtime.spawnFloatText(carPosition.x, carPosition.y + 78, "\u5907\u7528\u6218\u8f66\u9876\u4e0a", new cc.Color(255, 220, 120, 255));

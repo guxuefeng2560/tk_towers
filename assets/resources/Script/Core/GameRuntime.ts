@@ -1,5 +1,6 @@
 ﻿import { GameConfig } from "./GameConfig";
 import { GameContext } from "./GameContext";
+import { GamePhase, PrepareTaskKey } from "./GameDefines";
 import { SceneRefs } from "./SceneRefs";
 import CarPrefab from "../Battle/CarPrefab";
 import PoolManager from "../Util/PoolManager";
@@ -12,6 +13,12 @@ export default class GameRuntime {
     private static readonly BULLET_PREFAB_PATH = "prefab/bullet";
     private static readonly MONSTER_PREFAB_PATH = "prefab/monster";
     private static readonly CAR_PREFAB_PATH = "prefab/car";
+    private static readonly CAR_BODY_SPRITE_PATHS = [
+        "Texture/battleRes/box1",
+        "Texture/battleRes/box2",
+        "Texture/battleRes/box3",
+        "Texture/battleRes/box4",
+    ];
     private static readonly ROLLER_SPRITE_PATH = "Texture/battleUI/ci1";
     private static readonly SHIELD_SPRITE_PATH = "Texture/battleRes/def";
     private static readonly BOSS_SPRITE_PATHS = [
@@ -36,6 +43,7 @@ export default class GameRuntime {
     public bulletPrefab: cc.Prefab | null = null;
     public monsterPrefab: cc.Prefab | null = null;
     public carPrefab: cc.Prefab | null = null;
+    public carBodySpriteFrames: Array<cc.SpriteFrame | null> = Array(GameRuntime.CAR_BODY_SPRITE_PATHS.length).fill(null);
     public rollerSpriteFrame: cc.SpriteFrame | null = null;
     public shieldSpriteFrame: cc.SpriteFrame | null = null;
     public bossSpriteFrames: Array<cc.SpriteFrame | null> = Array(GameRuntime.BOSS_SPRITE_PATHS.length).fill(null);
@@ -226,7 +234,7 @@ export default class GameRuntime {
         this.rotateWheelNodes(deltaX);
         this.previousCarX = nextCarX;
         this.syncFarMapParallax();
-        this.updateShieldPresentation();
+        // this.updateShieldPresentation();
         if (this.refs.bossNode) {
             if (!this.refs.bossNode.active) {
                 this.refs.bossNode.x = this.bossLocalX;
@@ -820,7 +828,7 @@ export default class GameRuntime {
         this.worldRoot = new cc.Node("WorldRoot");
         this.worldRoot.parent = this.refs.root;
 
-        [this.mapLayout, this.heroLayout, this.enemyLayout].forEach((group) => {
+        [this.mapLayout, this.enemyLayout, this.heroLayout].forEach((group) => {
             if (!group || group.parent === this.worldRoot) {
                 return;
             }
@@ -875,6 +883,16 @@ export default class GameRuntime {
             if (this.context.sawCarUnlocked) {
                 this.syncCarPresentation();
             }
+        });
+
+        GameRuntime.CAR_BODY_SPRITE_PATHS.forEach((path, index) => {
+            resources.load(path, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+                if (error || !spriteFrame) {
+                    return;
+                }
+                this.carBodySpriteFrames[index] = spriteFrame;
+                this.updateCarBodyPresentation();
+            });
         });
 
         resources.load(GameRuntime.ROLLER_SPRITE_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
@@ -1193,16 +1211,42 @@ export default class GameRuntime {
                 return;
             }
 
-            const shouldShow = this.context.getCarDefenseUnlocked(index) && this.context.getCarHp(index) > 0;
             const shieldNode = view.shieldNode;
             this.configureShieldSpriteNode(shieldNode);
-            shieldNode.active = shouldShow;
+            shieldNode.stopAllActions();
+            shieldNode.active = false;
+            shieldNode.opacity = 0;
             const shieldSprite = shieldNode.getComponent(cc.Sprite);
             if (!shieldSprite) {
                 return;
             }
-            shieldSprite.enabled = shouldShow;
+            shieldSprite.enabled = this.context.getCarDefenseUnlocked(index) && this.context.getCarHp(index) > 0;
         });
+    }
+
+    public playCarShieldHitEffect(index: number): void {
+        const carView = this.carViews[index];
+        if (!carView || !cc.isValid(carView.node) || !carView.shieldNode || !cc.isValid(carView.shieldNode)) {
+            return;
+        }
+        if (!this.shouldShowCombatShieldEffect(index)) {
+            return;
+        }
+
+        const shieldNode = carView.shieldNode;
+        // this.configureShieldSpriteNode(shieldNode);
+        // shieldNode.stopAllActions();
+        shieldNode.active = true;
+        shieldNode.opacity = 100;
+        shieldNode.runAction(
+            cc.sequence(
+                cc.fadeTo(0.3, 255),
+                cc.fadeTo(0.1, 0),
+                cc.callFunc(() => {
+                    // shieldNode.active = false;
+                }),
+            ),
+        );
     }
 
     private configureShieldSpriteNode(shieldNode: cc.Node): void {
@@ -1224,6 +1268,12 @@ export default class GameRuntime {
         }
         shieldNode.scaleX = 0.12;
         shieldNode.scaleY = 0.12;
+    }
+
+    private shouldShowCombatShieldEffect(index: number): boolean {
+        return (this.context.phase === GamePhase.Battle || this.context.phase === GamePhase.Boss)
+            && this.context.getCarDefenseUnlocked(index)
+            && this.context.getCarHp(index) > 0;
     }
 
     private reparentKeepWorldTransform(node: cc.Node, newParent: cc.Node): void {
@@ -1280,7 +1330,7 @@ export default class GameRuntime {
 
         if (this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent) {
             this.refs.heroProgressBar.node.parent.stopAllActions();
-            this.refs.heroProgressBar.node.parent.active = true;
+            this.refs.heroProgressBar.node.parent.active = this.shouldShowCombatBars();
             this.refs.heroProgressBar.node.parent.opacity = 255;
         }
 
@@ -1298,14 +1348,21 @@ export default class GameRuntime {
         }
 
         layout.setPosition(this.prepareLayoutBasePosition.x, this.prepareLayoutBasePosition.y);
-        const targetCarIndex = Math.max(0, this.context.currentRound - 1);
+        const targetCarIndex = this.getPrepareTaskAnchorCarSlotIndex();
         const targetPosition = this.getPrepareCarSlotPositionInTaskLayout(targetCarIndex);
         const offsetX = targetPosition.x - this.prepareBaseCarSlotPosition.x;
         const offsetY = targetPosition.y - this.prepareBaseCarSlotPosition.y;
         const targetNodeY = this.prepareTaskSharedBasePosition.y + offsetY;
 
+        if (this.refs.btnBuyCar) {
+            this.refs.btnBuyCar.setPosition(this.refs.btnBuyCar.x, targetNodeY);
+        }
+
+        const followTargetY = this.refs.btnBuyCar
+            ? this.refs.btnBuyCar.y
+            : targetNodeY;
+
         [
-            this.refs.btnBuyCar,
             this.refs.btnUnlockSkill,
             this.refs.btnUpHurt,
             this.refs.btnUpHp,
@@ -1314,8 +1371,18 @@ export default class GameRuntime {
             if (!node) {
                 return;
             }
-            node.setPosition(node.x, targetNodeY);
+            node.setPosition(node.x, followTargetY);
         });
+    }
+
+    private getPrepareTaskAnchorCarSlotIndex(): number {
+        const aliveUnlockedCount = this.context.sawCarUnlocked
+            ? this.context.getAliveCarCount()
+            : 0;
+        const activeTaskKey = this.context.getCurrentRoundActivePrepareTaskKey();
+        return activeTaskKey === PrepareTaskKey.BuyCar
+            ? Math.max(0, aliveUnlockedCount)
+            : Math.max(0, aliveUnlockedCount - 1);
     }
 
     private getPrepareCarSlotPositionInTaskLayout(carIndex: number): cc.Vec2 {
@@ -1331,7 +1398,13 @@ export default class GameRuntime {
 
     private getPrepareCarSlotPositionInWorldRoot(carIndex: number): cc.Vec2 {
         const normalizedIndex = Math.max(0, Math.floor(carIndex));
-        const visualNode = this.getCarVisualNodeByIndex(normalizedIndex);
+        const aliveIndices = this.context.sawCarUnlocked ? this.context.getAliveCarIndices() : [];
+        const mappedCarIndex = normalizedIndex < aliveIndices.length
+            ? aliveIndices[normalizedIndex]
+            : -1;
+        const visualNode = mappedCarIndex >= 0
+            ? this.getCarVisualNodeByIndex(mappedCarIndex)
+            : null;
         if (visualNode) {
             return this.getNodePositionInWorldRoot(visualNode);
         }
@@ -1361,6 +1434,7 @@ export default class GameRuntime {
     }
 
     private syncSceneBars(): void {
+        this.syncCombatBarVisibility();
         if (this.refs.heroProgressBar) {
             this.refs.heroProgressBar.progress = this.context.playerMaxHp > 0
                 ? this.context.playerHp / this.context.playerMaxHp
@@ -1427,10 +1501,11 @@ export default class GameRuntime {
 
         this.carViews.forEach((view, index) => {
             const isVisible = aliveIndices.indexOf(index) >= 0;
+            view.setBodySpriteFrame(this.getCarBodySpriteFrame(index));
             view.setCarVisible(isVisible);
             view.setSawVisible(isVisible && this.isRollerSkillVisualReady(index));
             view.setShieldVisible(isVisible && this.context.getCarDefenseUnlocked(index));
-            view.setHpVisible(isVisible);
+            view.setHpVisible(isVisible && this.shouldShowCombatBars());
             const maxHp = this.context.getCarMaxHp(index);
             view.setHpProgress(maxHp > 0 ? this.context.getCarHp(index) / maxHp : 0);
         });
@@ -1463,17 +1538,48 @@ export default class GameRuntime {
     }
 
     private syncCarHpBars(): void {
+        const shouldShowBars = this.shouldShowCombatBars();
         this.carViews.forEach((view, index) => {
             if (!view || !cc.isValid(view.node)) {
                 return;
             }
             const isAlive = this.context.getCarHp(index) > 0;
-            view.setHpVisible(isAlive);
+            view.setHpVisible(isAlive && shouldShowBars);
             if (isAlive) {
                 const maxHp = this.context.getCarMaxHp(index);
                 view.setHpProgress(maxHp > 0 ? this.context.getCarHp(index) / maxHp : 0);
             }
         });
+    }
+
+    private syncCombatBarVisibility(): void {
+        if (this.refs.heroProgressBar && this.refs.heroProgressBar.node.parent) {
+            this.refs.heroProgressBar.node.parent.active = this.shouldShowCombatBars();
+        }
+    }
+
+    private shouldShowCombatBars(): boolean {
+        return this.context.phase === GamePhase.Battle
+            || this.context.phase === GamePhase.Boss
+            || this.context.phase === GamePhase.NormalPause
+            || this.context.phase === GamePhase.QuestionPause;
+    }
+
+    private updateCarBodyPresentation(): void {
+        this.carViews.forEach((view, index) => {
+            if (!view || !cc.isValid(view.node)) {
+                return;
+            }
+            view.setBodySpriteFrame(this.getCarBodySpriteFrame(index));
+        });
+    }
+
+    private getCarBodySpriteFrame(index: number): cc.SpriteFrame | null {
+        const hpUpgradeLevel = Math.max(0, Math.min(
+            this.carBodySpriteFrames.length - 1,
+            this.context.getCarHpUpgradeLevel(index),
+        ));
+        return this.carBodySpriteFrames[hpUpgradeLevel] || null;
     }
 
     private applyHeroCarStackOffset(): void {

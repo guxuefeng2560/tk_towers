@@ -144,6 +144,32 @@ export class GameContext {
         return this.getRoundTaskProgress(this.currentRound, taskKey);
     }
 
+    public getCurrentRoundActivePrepareTaskKey(): PrepareTaskKey | null {
+        const taskOrder: PrepareTaskKey[] = [
+            PrepareTaskKey.BuyCar,
+            PrepareTaskKey.UnlockSkill,
+            PrepareTaskKey.Hurt,
+            PrepareTaskKey.Hp,
+            PrepareTaskKey.UnlockDef,
+            PrepareTaskKey.Energy,
+        ];
+        const requiredCountByTask: Record<PrepareTaskKey, number> = {
+            [PrepareTaskKey.BuyCar]: 1,
+            [PrepareTaskKey.UnlockSkill]: 1,
+            [PrepareTaskKey.Hurt]: 5,
+            [PrepareTaskKey.Hp]: 3,
+            [PrepareTaskKey.UnlockDef]: 1,
+            [PrepareTaskKey.Energy]: 5,
+        };
+
+        for (const taskKey of taskOrder) {
+            if (this.getCurrentRoundTaskProgress(taskKey) < requiredCountByTask[taskKey]) {
+                return taskKey;
+            }
+        }
+        return null;
+    }
+
     public getRoundTaskProgress(round: number, taskKey: PrepareTaskKey): number {
         const state = this.ensurePrepareRoundState(round);
         return state.taskProgress[taskKey] || 0;
@@ -225,6 +251,14 @@ export class GameContext {
             return GameConfig.sawCar.baseHp;
         }
         return this.sawCarMaxHpList[index] || GameConfig.sawCar.baseHp;
+    }
+
+    public getCarHpUpgradeLevel(index: number): number {
+        if (index < 0 || index >= this.sawCarCount) {
+            return 0;
+        }
+        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        return state ? (state.taskProgress[PrepareTaskKey.Hp] || 0) : 0;
     }
 
     public getCarAttack(index: number): number {

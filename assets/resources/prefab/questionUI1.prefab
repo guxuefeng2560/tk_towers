@@ -1297,7 +1297,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 37
@@ -1427,19 +1427,19 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 380,
-      "height": 25.2
+      "height": 31.5
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
       "x": 0.5,
-      "y": 1
+      "y": 0.5
     },
     "_trs": {
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
         0,
-        27,
+        31,
         0,
         0,
         0,
@@ -1480,8 +1480,8 @@
     "_dstBlendFactor": 771,
     "_string": "妈妈叫我（）",
     "_N$string": "妈妈叫我（）",
-    "_fontSize": 20,
-    "_lineHeight": 20,
+    "_fontSize": 24,
+    "_lineHeight": 25,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"

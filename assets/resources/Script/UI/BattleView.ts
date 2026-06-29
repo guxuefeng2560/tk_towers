@@ -39,6 +39,8 @@ export default class BattleView {
     private readonly sawButton: cc.Node | null;
     private readonly answer1Button: cc.Node | null;
     private readonly answer2Button: cc.Node | null;
+    private readonly answer1LabelNode: cc.Node | null;
+    private readonly answer2LabelNode: cc.Node | null;
     private readonly speedButton: cc.Node | null;
     private active = false;
     private lastData: BattleViewData | null = null;
@@ -47,9 +49,11 @@ export default class BattleView {
         this.refs = refs;
         this.root = refs.btnBattleLayout;
         this.bombButton = this.root ? this.root.getChildByName("BtnBomb") : null;
-        this.sawButton = this.root ? this.root.getChildByName("BtnSawtooth") : null;
+        this.sawButton = this.root ? this.root.getChildByName("layout").getChildByName("BtnSawtooth") : null;
         this.answer1Button = refs.btnAnswer1;
         this.answer2Button = refs.btnAnswer2;
+        this.answer1LabelNode = this.findAnswerLabelNode(this.answer1Button);
+        this.answer2LabelNode = this.findAnswerLabelNode(this.answer2Button);
         this.speedButton = this.createSpeedButton(target, onSpeedUp);
         this.disableOverlayButtonInteraction(this.answer1Button);
         this.disableOverlayButtonInteraction(this.answer2Button);
@@ -73,14 +77,18 @@ export default class BattleView {
             this.setNodeGroupActive(this.refs.bossProgressBar ? this.refs.bossProgressBar.node.parent : null, false);
             this.setNodeGroupActive(this.refs.bossHpLabel ? this.refs.bossHpLabel.node : null, false);
             this.setNodeGroupActive(this.refs.nodeBattleProgress, false);
-            this.setNodeGroupActive(this.answer1Button, false);
-            this.setNodeGroupActive(this.answer2Button, false);
+            // this.setNodeGroupActive(this.answer1Button, false);
+            // this.setNodeGroupActive(this.answer2Button, false);
+            // this.setNodeGroupActive(this.answer1LabelNode, false);
+            // this.setNodeGroupActive(this.answer2LabelNode, false);
             this.setNodeGroupActive(this.speedButton, false);
             this.lastData = null;
             return;
         }
-        this.setNodeGroupActive(this.answer1Button, false);
-        this.setNodeGroupActive(this.answer2Button, false);
+        // this.setNodeGroupActive(this.answer1Button, true);
+        // this.setNodeGroupActive(this.answer2Button, true);
+        // this.setNodeGroupActive(this.answer1LabelNode, false);
+        // this.setNodeGroupActive(this.answer2LabelNode, false);
         this.updateSpeedButtonPosition();
     }
 
@@ -162,10 +170,12 @@ export default class BattleView {
         const sawSkillVisible = data.rollerSkillVisible;
         const rollerEnergyEnough = data.energy >= GameConfig.skill.roller.cost;
         const showSkillSwitch = data.phase !== GamePhase.QuestionPause;
-        // this.setCostVisibleIfChanged(this.refs.labelBombCost, showSkillSwitch && bombEnergyEnough);
-        // this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSkillSwitch && sawSkillVisible && rollerEnergyEnough);
-        this.setNodeGroupActiveIfChanged(this.answer1Button, showSkillSwitch && !bombEnergyEnough);
-        this.setNodeGroupActiveIfChanged(this.answer2Button, showSkillSwitch && sawSkillVisible && !rollerEnergyEnough);
+        this.setCostVisibleIfChanged(this.refs.labelBombCost, showSkillSwitch && bombEnergyEnough);
+        this.setCostVisibleIfChanged(this.refs.labelSawtoothCost,  sawSkillVisible && rollerEnergyEnough);
+        this.setNodeGroupActiveIfChanged(this.answer1Button, true);
+        this.setNodeGroupActiveIfChanged(this.answer2Button, true);
+        this.setNodeGroupActiveIfChanged(this.answer1LabelNode, !bombEnergyEnough);
+        this.setNodeGroupActiveIfChanged(this.answer2LabelNode, sawSkillVisible && !rollerEnergyEnough);
         this.setNodeGroupActiveIfChanged(this.speedButton, data.phase === GamePhase.Battle || data.phase === GamePhase.Boss || data.phase === GamePhase.NormalPause);
         this.updateSpeedButtonPosition();
 
@@ -234,6 +244,13 @@ export default class BattleView {
         }
     }
 
+    private findAnswerLabelNode(node: cc.Node | null): cc.Node | null {
+        if (!node) {
+            return null;
+        }
+        return node.getChildByName("label");
+    }
+
     private createSpeedButton(target: any, onSpeedUp: () => void): cc.Node | null {
         if (!this.refs.root) {
             return null;
@@ -290,12 +307,6 @@ export default class BattleView {
     }
 
     private updateBossIcons(completedRounds: number): void {
-        const iconNodes = this.refs.bossIconNodes || [];
-        iconNodes.forEach((node, index) => {
-            if (!node) {
-                return;
-            }
-            node.active = index >= completedRounds;
-        });
+        
     }
 }

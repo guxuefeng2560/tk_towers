@@ -22,7 +22,7 @@ export default class CarPrefab extends cc.Component {
     }
 
     public ensureRefs(): void {
-        this.bodyNode = this.bodyNode || this.node.getChildByName("btn1_1");
+        this.bodyNode = this.resolveBodyNode();
         this.sawNode = this.sawNode || this.node.getChildByName("teshu2");
         this.hpRootNode = this.hpRootNode || this.node.getChildByName("progressBg");
         this.shieldNode = this.shieldNode || this.node.getChildByName("Nodebuff");
@@ -31,6 +31,15 @@ export default class CarPrefab extends cc.Component {
             const progressNode = this.hpRootNode.getChildByName("progressBar");
             this.hpProgressBar = progressNode ? progressNode.getComponent(cc.ProgressBar) : null;
         }
+    }
+
+    public setBodySpriteFrame(spriteFrame: cc.SpriteFrame | null): void {
+        this.ensureRefs();
+        const sprite = this.getBodySprite();
+        if (!sprite) {
+            return;
+        }
+        sprite.spriteFrame = spriteFrame;
     }
 
     public setCarVisible(visible: boolean): void {
@@ -64,5 +73,17 @@ export default class CarPrefab extends cc.Component {
             return;
         }
         this.hpProgressBar.progress = Math.max(0, Math.min(1, progress));
+    }
+
+    private resolveBodyNode(): cc.Node | null {
+        if (this.bodyNode && cc.isValid(this.bodyNode) && this.bodyNode !== this.node) {
+            return this.bodyNode;
+        }
+        return this.node.getChildByName("box") || this.bodyNode || this.node;
+    }
+
+    private getBodySprite(): cc.Sprite | null {
+        const bodyNode = this.resolveBodyNode();
+        return bodyNode ? bodyNode.getComponent(cc.Sprite) : null;
     }
 }

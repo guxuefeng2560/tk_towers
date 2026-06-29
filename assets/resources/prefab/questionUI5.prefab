@@ -1323,19 +1323,19 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 380,
-      "height": 22
+      "height": 52
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
       "x": 0.5,
-      "y": 0.5
+      "y": 0
     },
     "_trs": {
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
         0,
-        52,
+        59,
         0,
         0,
         0,
@@ -1376,8 +1376,8 @@
     "_dstBlendFactor": 771,
     "_string": "你第一次来中国_____?",
     "_N$string": "你第一次来中国_____?",
-    "_fontSize": 18,
-    "_lineHeight": 22,
+    "_fontSize": 24,
+    "_lineHeight": 25,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1388,7 +1388,7 @@
     "_styleFlags": 0,
     "_underlineHeight": 0,
     "_N$horizontalAlign": 1,
-    "_N$verticalAlign": 1,
+    "_N$verticalAlign": 2,
     "_N$fontFamily": "Arial",
     "_N$overflow": 2,
     "_N$cacheMode": 0,
@@ -1433,19 +1433,19 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 380,
-      "height": 36
+      "height": 52
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
       "x": 0.5,
-      "y": 0.5
+      "y": 1
     },
     "_trs": {
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
         0,
-        22,
+        50,
         0,
         0,
         0,
@@ -1486,8 +1486,8 @@
     "_dstBlendFactor": 771,
     "_string": "你第一次来中国_____?",
     "_N$string": "你第一次来中国_____?",
-    "_fontSize": 18,
-    "_lineHeight": 22,
+    "_fontSize": 24,
+    "_lineHeight": 25,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1498,7 +1498,7 @@
     "_styleFlags": 0,
     "_underlineHeight": 0,
     "_N$horizontalAlign": 1,
-    "_N$verticalAlign": 1,
+    "_N$verticalAlign": 0,
     "_N$fontFamily": "Arial",
     "_N$overflow": 2,
     "_N$cacheMode": 0,
@@ -1523,7 +1523,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 43
