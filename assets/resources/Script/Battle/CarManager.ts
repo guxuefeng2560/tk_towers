@@ -1,6 +1,8 @@
 import { GameConfig } from "../Core/GameConfig";
 import { GamePhase } from "../Core/GameDefines";
 import GameRuntime from "../Core/GameRuntime";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 import { distance, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -131,6 +133,7 @@ export default class CarManager {
             const damage = this.getIncomingDamage(baseDamage, targetCarIndex);
             const carPosition = this.runtime.getCarWorldPositionByIndex(targetCarIndex);
             this.runtime.spawnFloatText(carPosition.x, carPosition.y + 45, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
+            AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
             const damageResult = this.runtime.context.damageCar(targetCarIndex, damage);
             this.runtime.playCarShieldHitEffect(targetCarIndex);
             if (damageResult.destroyed) {

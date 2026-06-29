@@ -2,6 +2,8 @@ import { GameConfig } from "../Core/GameConfig";
 import { GamePhase } from "../Core/GameDefines";
 import GameRuntime from "../Core/GameRuntime";
 import { MonsterKind, MonsterRuntime } from "../Entity/EntityTypes";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 import { clamp, randomRange, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -251,6 +253,7 @@ export default class MonsterManager {
             return;
         }
 
+        AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_ide, 0.15);
         monster.dying = true;
         monster.contactCar = false;
         monster.contactCarIndex = -1;

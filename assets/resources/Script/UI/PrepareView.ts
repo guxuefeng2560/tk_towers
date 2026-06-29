@@ -231,7 +231,7 @@ export default class PrepareView {
 
     private formatPercent(value: number): string {
         const clampedValue = Math.max(0, Math.min(100, value));
-        const roundedValue = Math.round(clampedValue * 10) / 10;
+        const roundedValue = Math.floor((clampedValue * 10) / 10 + 0.5);
         return `${roundedValue.toFixed(Number.isInteger(roundedValue) ? 0 : 1)}%`;
     }
 
@@ -253,20 +253,6 @@ export default class PrepareView {
             return data.totalQuestionCount > 0 ? 100 : 0;
         }
         return 100;
-    }
-
-    private buildTaskText(task: PrepareTaskViewState): string {
-        const progressText = `${task.progress}/${task.required}`;
-        if (task.key === PrepareTaskKey.BuyCar) {
-            return `\u8d2d\u4e70\u5c0f\u8f66\n${progressText}`;
-        }
-        if (task.key === PrepareTaskKey.UnlockSkill) {
-            return `\u89e3\u9501\u6280\u80fd\n${progressText}`;
-        }
-        if (task.key === PrepareTaskKey.UnlockDef) {
-            return `\u89e3\u9501\u62a4\u76fe\n${progressText}`;
-        }
-        return progressText;
     }
 
     private setTaskNodesVisible(visibleTaskKey: PrepareTaskKey | null): void {

@@ -1,0 +1,69 @@
+
+zhujue.png
+size: 139,62
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+gjs_0
+  rotate: false
+  xy: 2, 9
+  size: 43, 51
+  orig: 46, 53
+  offset: 1, 1
+  index: -1
+gjs_1
+  rotate: false
+  xy: 113, 47
+  size: 24, 13
+  orig: 26, 15
+  offset: 1, 1
+  index: -1
+gjs_10
+  rotate: true
+  xy: 76, 4
+  size: 17, 24
+  orig: 17, 24
+  offset: 0, 0
+  index: -1
+gjs_4
+  rotate: false
+  xy: 47, 5
+  size: 27, 16
+  orig: 29, 18
+  offset: 1, 1
+  index: -1
+gjs_5
+  rotate: false
+  xy: 47, 23
+  size: 36, 37
+  orig: 36, 37
+  offset: 0, 0
+  index: -1
+gjs_6
+  rotate: true
+  xy: 85, 25
+  size: 35, 26
+  orig: 37, 28
+  offset: 1, 1
+  index: -1
+gjs_7
+  rotate: true
+  xy: 124, 10
+  size: 21, 11
+  orig: 23, 13
+  offset: 1, 1
+  index: -1
+gjs_8
+  rotate: false
+  xy: 113, 33
+  size: 22, 12
+  orig: 22, 12
+  offset: 0, 0
+  index: -1
+gjs_9
+  rotate: false
+  xy: 102, 2
+  size: 20, 21
+  orig: 20, 21
+  offset: 0, 0
+  index: -1

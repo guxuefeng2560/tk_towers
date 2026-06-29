@@ -1,0 +1,20 @@
+
+zhujue_wuqi.png
+size: 43,46
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+gjs_2
+  rotate: false
+  xy: 2, 2
+  size: 39, 10
+  orig: 41, 12
+  offset: 1, 1
+  index: -1
+gjs_3
+  rotate: false
+  xy: 2, 14
+  size: 36, 30
+  orig: 38, 32
+  offset: 1, 1
+  index: -1

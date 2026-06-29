@@ -2,6 +2,8 @@ import { GameConfig } from "../Core/GameConfig";
 import { GamePhase } from "../Core/GameDefines";
 import GameRuntime from "../Core/GameRuntime";
 import { BulletRuntime } from "../Entity/EntityTypes";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 import { clamp, distance, randomRange, rectIntersects, rotateVector } from "../Util/MathUtil";
 
 /**
@@ -78,6 +80,7 @@ export default class BulletManager {
         }
 
         this.runtime.playHeroAttack(baseDirection);
+        AudioManager.getInstance().playSFX(AudioID.AudioID_hero_attack);
         const bulletSpeed = manualAiming
             ? this.getManualBulletSpeed(this.runtime.forcedAimDistance, firePosition, manualAimTargetPosition)
             : GameConfig.player.bulletSpeed;

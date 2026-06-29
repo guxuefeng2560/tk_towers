@@ -1,0 +1,13 @@
+{
+    "SFX":[
+        {"id":"1", "path":"audio/sfx/audio_click", "loop":false, "volume":"1", "reload":false},
+        {"id":"2", "path":"audio/sfx/boom", "loop":false, "volume":"1", "reload":false},
+        {"id":"3", "path":"audio/sfx/die1", "loop":false, "volume":"0.5", "reload":false},
+        {"id":"4", "path":"audio/sfx/gunzi", "loop":false, "volume":"1", "reload":false},
+        {"id":"5", "path":"audio/sfx/shoot", "loop":false, "volume":"1", "reload":false}
+    ],
+    "Music":[
+        {"id":"98", "path":"audio/sfx/battle_music", "loop":true, "volume":"1", "reload":false},
+        {"id":"99", "path":"audio/sfx/battle_music1", "loop":true, "volume":"0.8", "reload":false}
+    ]
+}

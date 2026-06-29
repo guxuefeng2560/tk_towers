@@ -223,7 +223,7 @@ export default class TowerDefenseScene extends cc.Component {
         ResModuleManager.init(Global.game_id, Global.game_id);
         AudioManager.getInstance();
         this.scheduleOnce(function() {
-            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BATTLE);
+            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BATTLE1);
         }, 1.0)
     }
 

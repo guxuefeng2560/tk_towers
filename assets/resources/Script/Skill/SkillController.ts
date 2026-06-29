@@ -1,6 +1,8 @@
 import { GameConfig } from "../Core/GameConfig";
 import GameRuntime from "../Core/GameRuntime";
 import { SkillType } from "../Entity/EntityTypes";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 import { distance, rectIntersects } from "../Util/MathUtil";
 
 export type SkillAttemptResult =
@@ -270,6 +272,7 @@ export default class SkillController {
         }
         this.runtime.context.bombUseCount += 1;
         this.runtime.bombCooldown = GameConfig.skill.bomb.cooldown;
+        AudioManager.getInstance().playSFX(AudioID.AudioID_Boom);
         this.spawnBombEffect(target);
         this.damageMonstersInBombRange(target, onBombHit);
     }
