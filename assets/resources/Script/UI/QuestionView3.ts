@@ -1,5 +1,6 @@
 import { MatchingQuestionData } from "../Core/GameDefines";
 import { QUESTION_RESULT_DELAY } from "./QuestionResultStamp";
+import QuestionViewBase from "./QuestionViewBase";
 import { closeQuestionViewTo, openQuestionViewFrom } from "./QuestionViewMotion";
 
 const { ccclass, property } = cc._decorator;
@@ -13,7 +14,7 @@ export interface QuestionViewData {
 
 /** 匹配 */
 @ccclass
-export default class QuestionView3 extends cc.Component {
+export default class QuestionView3 extends QuestionViewBase {
     private static readonly BAR_DEFAULT_PATH = "Texture/questionUI/bar_7";
     private static readonly BAR_SELECTED_PATH = "Texture/questionUI/bar_4";
     private static readonly STATE_RIGHT_PATH = "Texture/questionUI/right";
@@ -28,8 +29,6 @@ export default class QuestionView3 extends cc.Component {
     @property([cc.Label])
     leftOptionLabels: cc.Label[] = [];
 
-    private static readonly DISPLAY_OFFSET_X = 360;
-    private static readonly DISPLAY_OFFSET_Y = 60;
     private static readonly SWAP_DURATION = 0.18;
     private static barDefaultFrame: cc.SpriteFrame | null = null;
     private static barSelectedFrame: cc.SpriteFrame | null = null;
@@ -616,7 +615,4 @@ export default class QuestionView3 extends cc.Component {
         return this.node.parent.convertToNodeSpaceAR(worldPosition);
     }
 
-    private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView3.DISPLAY_OFFSET_X, QuestionView3.DISPLAY_OFFSET_Y);
-    }
 }

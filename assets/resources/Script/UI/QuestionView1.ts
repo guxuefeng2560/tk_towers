@@ -7,6 +7,7 @@ import {
     SplitSentenceChoiceQuestionData,
 } from "../Core/GameDefines";
 import { QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
+import QuestionViewBase from "./QuestionViewBase";
 import { closeQuestionViewTo, openQuestionViewFrom } from "./QuestionViewMotion";
 
 const { ccclass, property } = cc._decorator;
@@ -28,10 +29,7 @@ export interface QuestionViewData {
 }
 
 @ccclass
-export default class QuestionView1 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 360;
-    private static readonly DISPLAY_OFFSET_Y = 60;
-
+export default class QuestionView1 extends QuestionViewBase {
     private static readonly LABEL_OUTLINE_DEFAULT = new cc.Color(154, 99, 50, 255);
     private static readonly LABEL_OUTLINE_CORRECT = new cc.Color(18, 110, 140, 255);
     private static readonly LABEL_OUTLINE_WRONG = new cc.Color(175, 49, 49, 255);
@@ -426,7 +424,4 @@ export default class QuestionView1 extends cc.Component {
         return this.node.parent.convertToNodeSpaceAR(worldPosition);
     }
 
-    private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView1.DISPLAY_OFFSET_X, QuestionView1.DISPLAY_OFFSET_Y);
-    }
 }

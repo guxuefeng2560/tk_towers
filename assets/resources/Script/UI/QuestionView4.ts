@@ -1,5 +1,6 @@
 import { OrderingQuestionData, QuestionOption } from "../Core/GameDefines";
 import { QUESTION_RESULT_DELAY } from "./QuestionResultStamp";
+import QuestionViewBase from "./QuestionViewBase";
 import { closeQuestionViewTo, openQuestionViewFrom } from "./QuestionViewMotion";
 
 const { ccclass, property } = cc._decorator;
@@ -28,9 +29,7 @@ interface TokenBinding {
 
 /** 排序 */
 @ccclass
-export default class QuestionView4 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 360;
-    private static readonly DISPLAY_OFFSET_Y = 60;
+export default class QuestionView4 extends QuestionViewBase {
     private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
     private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
     private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
@@ -552,7 +551,4 @@ export default class QuestionView4 extends cc.Component {
         return this.node.parent.convertToNodeSpaceAR(worldPosition);
     }
 
-    private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView4.DISPLAY_OFFSET_X, QuestionView4.DISPLAY_OFFSET_Y);
-    }
 }

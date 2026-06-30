@@ -1,5 +1,6 @@
 import { ImageChoiceQuestionData } from "../Core/GameDefines";
 import { playResultStamp, QUESTION_RESULT_DELAY, resetResultState } from "./QuestionResultStamp";
+import QuestionViewBase from "./QuestionViewBase";
 import { closeQuestionViewTo, openQuestionViewFrom } from "./QuestionViewMotion";
 
 const { ccclass, property } = cc._decorator;
@@ -17,9 +18,7 @@ export interface QuestionViewData {
 
 /** 看图选择 */
 @ccclass
-export default class QuestionView2 extends cc.Component {
-    private static readonly DISPLAY_OFFSET_X = 360;
-    private static readonly DISPLAY_OFFSET_Y = 60;
+export default class QuestionView2 extends QuestionViewBase {
     private static readonly COLOR_CORRECT = new cc.Color(201, 249, 129, 255);
     private static readonly COLOR_DEFAULT = new cc.Color(220, 220, 220, 255);
     private static readonly COLOR_WRONG = new cc.Color(236, 128, 141, 255);
@@ -335,7 +334,4 @@ export default class QuestionView2 extends cc.Component {
         return this.node.parent.convertToNodeSpaceAR(worldPosition);
     }
 
-    private getRestPosition(): cc.Vec2 {
-        return cc.v2(QuestionView2.DISPLAY_OFFSET_X, QuestionView2.DISPLAY_OFFSET_Y);
-    }
 }

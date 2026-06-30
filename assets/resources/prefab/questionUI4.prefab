@@ -143,7 +143,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 432,
+      "width": 550,
       "height": 435
     },
     "_anchorPoint": {
@@ -257,7 +257,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 429,
+      "width": 550,
       "height": 56
     },
     "_anchorPoint": {
@@ -333,7 +333,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -121,
+        -150,
         1,
         0,
         0,
@@ -440,7 +440,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        129,
+        150,
         1,
         0,
         0,
@@ -526,8 +526,8 @@
     "_spriteFrame": {
       "__uuid__": "54704189-d156-46ee-b548-970351562703"
     },
-    "_type": 0,
-    "_sizeMode": 1,
+    "_type": 1,
+    "_sizeMode": 0,
     "_fillType": 0,
     "_fillCenter": {
       "__type__": "cc.Vec2",
@@ -724,7 +724,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -199,
+        -247,
         144,
         0,
         0,
@@ -852,7 +852,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -116.174,
+        -164.174,
         141.776,
         0,
         0,
@@ -962,7 +962,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        158,
+        197,
         144,
         0,
         0,
@@ -1093,7 +1093,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        150,
+        189,
         144,
         0,
         0,
@@ -1209,7 +1209,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 394,
+      "width": 500,
       "height": 126
     },
     "_anchorPoint": {
@@ -1316,7 +1316,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 380,
+      "width": 440,
       "height": 36
     },
     "_anchorPoint": {
@@ -1533,7 +1533,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 320,
+      "width": 460,
       "height": 2
     },
     "_anchorPoint": {
@@ -1662,7 +1662,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -135,
+        -204,
         -52,
         0,
         0,
