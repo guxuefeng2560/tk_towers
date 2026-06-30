@@ -105,6 +105,7 @@ export default class PrepareController {
             : visibleTaskKeyOverride;
         const prepareFinished = this.context.prepareAnsweredCount >= this.prepareQuestionTargetCount
             || !this.currentPrepareQuestion;
+        const currentRoundCarIndex = this.context.getCurrentRoundCarIndex();
 
         return {
             showStartButton: prepareFinished,
@@ -113,8 +114,8 @@ export default class PrepareController {
             currentPowerPercent: this.getPowerPercent(),
             totalPowerPercent: this.getTotalPowerPercent(),
             powerPercent: this.getPowerPercent(),
-            hurtValueText: `${Math.round(this.context.getCarAttack(Math.max(0, this.context.currentRound - 1)))}`,
-            hpValueText: `${Math.round(this.context.getCarMaxHp(Math.max(0, this.context.currentRound - 1)))}`,
+            hurtValueText: `${Math.round(this.context.getCarAttack(currentRoundCarIndex))}`,
+            hpValueText: `${Math.round(this.context.getCarMaxHp(currentRoundCarIndex))}`,
             energyRateText: this.formatEnergyRate(this.context.energyRegen),
             tasks: this.getPrepareTasks().map((task) => this.toTaskViewState(task, visibleTaskKey, currentTask ? currentTask.key : null)),
         };

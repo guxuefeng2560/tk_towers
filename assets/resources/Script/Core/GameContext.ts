@@ -79,7 +79,6 @@ export class GameContext {
         this.currentRound = 1;
         this.prepareRoundStates = [];
         this.sawCarHpList = [];
-
         this.ensurePrepareRoundState(1);
         this.recalculateStats();
         this.resetBattleRuntime();
@@ -257,7 +256,7 @@ export class GameContext {
         if (index < 0 || index >= this.sawCarCount) {
             return 0;
         }
-        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        const state = this.getCarPrepareRoundState(index);
         return state ? (state.taskProgress[PrepareTaskKey.Hp] || 0) : 0;
     }
 
@@ -268,13 +267,22 @@ export class GameContext {
         return this.sawCarAttackList[index] || GameConfig.sawCar.baseAttack;
     }
 
+    public getCurrentRoundCarIndex(): number {
+        for (let index = 0; index < this.sawCarCount; index += 1) {
+            if (this.getCarRound(index) === this.currentRound) {
+                return index;
+            }
+        }
+        return Math.max(0, Math.min(this.sawCarCount - 1, this.currentRound - 1));
+    }
+
     public getCarDefenseUnlocked(index: number): boolean {
-        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        const state = this.getCarPrepareRoundState(index);
         return !!state && (state.taskProgress[PrepareTaskKey.UnlockDef] || 0) > 0;
     }
 
     public getCarSkillUnlocked(index: number): boolean {
-        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        const state = this.getCarPrepareRoundState(index);
         return !!state && (state.taskProgress[PrepareTaskKey.UnlockSkill] || 0) > 0;
     }
 
@@ -441,15 +449,42 @@ export class GameContext {
     }
 
     private calculateCarMaxHp(index: number): number {
-        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        const state = this.getCarPrepareRoundState(index);
         const hpLevel = state ? (state.taskProgress[PrepareTaskKey.Hp] || 0) : 0;
         return GameConfig.sawCar.baseHp + hpLevel * GameConfig.sawCar.hpAddPerLevel;
     }
 
     private calculateCarAttack(index: number): number {
-        const state = this.prepareRoundStates.find((item) => item.round === index + 1);
+        const state = this.getCarPrepareRoundState(index);
         const attackLevel = state ? (state.taskProgress[PrepareTaskKey.Hurt] || 0) : 0;
         return GameConfig.sawCar.baseAttack + attackLevel * GameConfig.sawCar.attackAddPerLevel;
+    }
+
+    private getCarRound(index: number): number {
+        if (index < 0) {
+            return 1;
+        }
+        const unlockedRounds = this.getUnlockedCarRounds();
+        return unlockedRounds[index] || (index + 1);
+    }
+
+    private getCarPrepareRoundState(index: number): PrepareRoundState | undefined {
+        const round = this.getCarRound(index);
+        return this.prepareRoundStates.find((item) => item.round === round);
+    }
+
+    private getUnlockedCarRounds(): number[] {
+        const rounds: number[] = [];
+        this.prepareRoundStates
+            .slice()
+            .sort((left, right) => left.round - right.round)
+            .forEach((state) => {
+                const buyCount = Math.max(0, state.taskProgress[PrepareTaskKey.BuyCar] || 0);
+                for (let count = 0; count < buyCount; count += 1) {
+                    rounds.push(state.round);
+                }
+            });
+        return rounds;
     }
 
     private getTotalTaskProgress(taskKey: PrepareTaskKey): number {

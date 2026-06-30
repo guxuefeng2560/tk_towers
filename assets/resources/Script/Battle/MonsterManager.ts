@@ -65,7 +65,6 @@ export default class MonsterManager {
 
     // ===== Boss 阶段怪物生成 =====
     private static readonly BOSS_PRE_SPAWN_SPACING = 90;
-    private static readonly BOSS_PRE_SPAWN_INTERVAL = 0.28;
 
     private readonly runtime: GameRuntime;
     private readonly callbacks: MonsterManagerCallbacks;
@@ -98,9 +97,7 @@ export default class MonsterManager {
         }
 
         this.runtime.bossSpawnTimer += dt;
-        const spawnInterval = this.runtime.bossPreSpawnRemaining > 0
-            ? MonsterManager.BOSS_PRE_SPAWN_INTERVAL
-            : 1 / GameConfig.monster.bossSpawnPerSecond;
+        const spawnInterval = 1 / GameConfig.monster.bossSpawnPerSecond;
         while (this.runtime.bossSpawnTimer >= spawnInterval) {
             this.runtime.bossSpawnTimer -= spawnInterval;
             if (this.runtime.bossPreSpawnRemaining > 0) {
@@ -677,7 +674,10 @@ export default class MonsterManager {
     }
 
     private getBattleSpawnRate(battleTime: number): number {
-        const phase = GameConfig.monster.battleSpawnPhases.find((item) => battleTime >= item.start && battleTime < item.end);
+        const schedules = GameConfig.monster.battleSpawnPhasesByRound;
+        const roundIndex = Math.max(0, Math.min(schedules.length - 1, this.runtime.context.currentRound - 1));
+        const schedule = schedules[roundIndex] || schedules[0] || [];
+        const phase = schedule.find((item) => battleTime >= item.start && (item.end === undefined || battleTime < item.end));
         return phase ? phase.rate : 0;
     }
 

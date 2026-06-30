@@ -68,13 +68,32 @@ export const GameConfig = {
             attack: 350,
         },
         glowRateRound: 1.1,
-        battleSpawnPhases: [
-            { start: 0, end: 10, rate: 0.5 },
-            { start: 10, end: 25, rate: 1 },
-            { start: 25, end: 40, rate: 1 },
-            { start: 40, end: 60, rate: 2 },
+        battleSpawnPhasesByRound: [
+            [
+                { start: 0, end: 10, rate: 0.5 },
+                { start: 10, end: 25, rate: 0.5 },
+                { start: 25, end: 40, rate: 1 },
+                { start: 40, rate: 2 },
+            ],
+            [
+                { start: 0, end: 10, rate: 0.5 },
+                { start: 10, end: 25, rate: 1 },
+                { start: 25, rate: 2 },
+            ],
+            [
+                { start: 0, end: 10, rate: 1 },
+                { start: 10, rate: 2 },
+            ],
+            [
+                { start: 0, end: 10, rate: 1 },
+                { start: 10, rate: 2 },
+            ],
+            [
+                { start: 0, end: 10, rate: 1 },
+                { start: 10, rate: 2 },
+            ],
         ],
-        bossSpawnPerSecond: 3,
+        bossSpawnPerSecond: 5,
         bossPreSpawnCount: 14,
     },
 
