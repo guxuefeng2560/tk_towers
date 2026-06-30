@@ -61,11 +61,17 @@ export const GameConfig = {
         },
         elite: {
             hp: 180,
-            attack: 350,
+            attack: 200,
+            rangedAttackRange: 600,
+            projectileSpeed: 620,
+            projectileWidth: 42,
+            projectileHeight: 16,
+            projectileFireOffsetX: -26,
+            projectileFireOffsetY: 28,
         },
         langtou: {
-            hp: 200,
-            attack: 350,
+            hp: 800,
+            attack: 100,
         },
         glowRateRound: 1.1,
         battleSpawnPhasesByRound: [

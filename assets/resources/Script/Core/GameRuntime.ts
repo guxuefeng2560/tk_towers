@@ -5,7 +5,7 @@ import { SceneRefs } from "./SceneRefs";
 import CarPrefab from "../Battle/CarPrefab";
 import PoolManager from "../Util/PoolManager";
 import UIPrimitives from "../UI/UIPrimitives";
-import { BulletRuntime, EffectRuntime, MonsterKind, MonsterRuntime, RollerRuntime, UiBarLike } from "../Entity/EntityTypes";
+import { BulletRuntime, EffectRuntime, EnemyProjectileRuntime, MonsterKind, MonsterRuntime, RollerRuntime, UiBarLike } from "../Entity/EntityTypes";
 import { randomRange } from "../Util/MathUtil";
 
 export default class GameRuntime {
@@ -30,6 +30,7 @@ export default class GameRuntime {
         "Texture/battleRes/boss5",
     ];
     private static readonly BULLET_GROUND_SPRITE_PATH = "Texture/ui/bullet1";
+    private static readonly ENEMY_PROJECTILE_SPRITE_PATH = "Texture/battleRes/fb_0";
     private static readonly BOMB_SPINE_PATH = "Texture/spine/effect/1001_die";
 
     public readonly context = new GameContext();
@@ -49,6 +50,7 @@ export default class GameRuntime {
     public shieldSpriteFrame: cc.SpriteFrame | null = null;
     public bossSpriteFrames: Array<cc.SpriteFrame | null> = Array(GameRuntime.BOSS_SPRITE_PATHS.length).fill(null);
     public bulletGroundSpriteFrame: cc.SpriteFrame | null = null;
+    public enemyProjectileSpriteFrame: cc.SpriteFrame | null = null;
     public bombEffectSpineData: sp.SkeletonData | null = null;
     public monsterSpineData: Record<MonsterKind, sp.SkeletonData | null> = {
         normal: null,
@@ -63,6 +65,7 @@ export default class GameRuntime {
 
     public monsters: MonsterRuntime[] = [];
     public bullets: BulletRuntime[] = [];
+    public enemyProjectiles: EnemyProjectileRuntime[] = [];
     public rollers: RollerRuntime[] = [];
     public effects: EffectRuntime[] = [];
     public pendingFloatTextAnchor: cc.Node | null = null;
@@ -522,14 +525,27 @@ export default class GameRuntime {
         return bulletNode;
     }
 
+    public createEnemyProjectileNode(): cc.Node {
+        const node = new cc.Node("EnemyProjectile");
+        node.setContentSize(GameConfig.monster.elite.projectileWidth, GameConfig.monster.elite.projectileHeight);
+        const sprite = node.addComponent(cc.Sprite);
+        sprite.sizeMode = cc.Sprite.SizeMode.CUSTOM;
+        if (this.enemyProjectileSpriteFrame) {
+            sprite.spriteFrame = this.enemyProjectileSpriteFrame;
+        }
+        return node;
+    }
+
     public clearBattleObjects(): void {
         this.monsters.forEach((monster) => this.poolManager.put("monster", monster.node));
         this.bullets.forEach((bullet) => this.poolManager.put("bullet", bullet.node));
+        this.enemyProjectiles.forEach((projectile) => this.poolManager.put("enemyProjectile", projectile.node));
         this.rollers.forEach((roller) => this.poolManager.put("roller", roller.node));
         this.effects.forEach((effect) => this.poolManager.put(effect.key, effect.node));
 
         this.monsters = [];
         this.bullets = [];
+        this.enemyProjectiles = [];
         this.rollers = [];
         this.effects = [];
     }
@@ -927,6 +943,13 @@ export default class GameRuntime {
                 return;
             }
             this.bulletGroundSpriteFrame = spriteFrame;
+        });
+
+        resources.load(GameRuntime.ENEMY_PROJECTILE_SPRITE_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (error || !spriteFrame) {
+                return;
+            }
+            this.enemyProjectileSpriteFrame = spriteFrame;
         });
 
         resources.load(GameRuntime.BOMB_SPINE_PATH, sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {

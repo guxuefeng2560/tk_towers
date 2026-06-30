@@ -47,6 +47,14 @@ export interface BulletRuntime {
     pendingCraterDelay?: number;
 }
 
+export interface EnemyProjectileRuntime {
+    node: cc.Node;
+    targetType: "car" | "hero";
+    targetCarIndex: number;
+    damage: number;
+    speed: number;
+}
+
 export interface RollerRuntime {
     node: cc.Node;
     hitMonsterIds: Record<number, boolean>;

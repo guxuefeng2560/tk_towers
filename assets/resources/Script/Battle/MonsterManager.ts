@@ -4,9 +4,10 @@ import GameRuntime from "../Core/GameRuntime";
 import { MonsterKind, MonsterRuntime } from "../Entity/EntityTypes";
 import AudioManager from "../Framework/audio/TD_AudioManager";
 import { AudioID } from "../global/TD_Constants";
-import { clamp, randomRange, rectIntersects } from "../Util/MathUtil";
+import { clamp, distance, randomRange, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
+type EliteRangedTarget = { type: "car" | "hero"; carIndex: number; position: cc.Vec2 };
 
 type MonsterFrameCaches = {
     monsterById: Record<number, MonsterRuntime>;
@@ -145,6 +146,8 @@ export default class MonsterManager {
             monster.contactHero = false;
             const laneY = this.getMonsterLaneY(monster.laneIndex);
             const supportMonster = this.getSupportedMonster(monster, preUpdateCaches.monsterById);
+            const eliteRangedBaseCarIndex = monster.kind === "elite" ? this.getEliteRangedBaseCarIndex(monster) : -1;
+            const isEliteRangedAttackPlaying = monster.kind === "elite" && this.runtime.isMonsterAttackPlaying(monster.node);
 
             if (monster.stackedOnMonsterId > 0 && !supportMonster) {
                 monster.stackedOnMonsterId = 0;
@@ -152,12 +155,14 @@ export default class MonsterManager {
             }
 
             if (monster.stackedOnMonsterId > 0) {
-                if (!this.isMonsterJumping(monster)) {
+                if (!this.isMonsterJumping(monster) && !isEliteRangedAttackPlaying) {
                     monster.node.x -= GameConfig.monster.speed * dt;
                 }
             } else {
                 monster.stackedOnMonsterId = 0;
-                monster.node.x -= GameConfig.monster.speed * dt;
+                if (!isEliteRangedAttackPlaying) {
+                    monster.node.x -= GameConfig.monster.speed * dt;
+                }
 
                 if (monster.node.y > laneY) {
                     monster.node.y = Math.max(laneY, monster.node.y - MonsterManager.MONSTER_STACK_FALL_SPEED * dt);
@@ -174,7 +179,17 @@ export default class MonsterManager {
             const hitsHero = heroCanCollide
                 && (rectIntersects(monsterRect, heroRect) || (reachesHeroFront && this.callbacks.rectOverlapsY(monsterRect, heroRect)));
             const shouldAttackHero = !hitsCar && hitsHero;
-            if (shouldAttackHero) {
+            if (monster.kind === "elite") {
+                if (hitsCar) {
+                    monster.contactCar = true;
+                    monster.contactCarIndex = carContact.index;
+                    monster.node.x = carContact.contactFrontX + GameConfig.monster.width / 2;
+                } else if (hitsHero) {
+                    monster.contactHero = true;
+                    monster.node.x = heroContactFrontX + GameConfig.monster.width / 2;
+                }
+                this.updateEliteRangedAttack(monster, dt, eliteRangedBaseCarIndex);
+            } else if (shouldAttackHero) {
                 monster.contactHero = true;
                 monster.node.x = heroContactFrontX + GameConfig.monster.width / 2;
                 monster.attackTimer += dt;
@@ -210,6 +225,7 @@ export default class MonsterManager {
         this.resolveMonsterLaneSpacing(contactCarFrontX, previousXById, postUpdateCaches);
         const postSpacingCaches = this.buildMonsterFrameCaches();
         this.resolveMonsterVerticalStacking(dt, postSpacingCaches);
+        this.updateEnemyProjectiles(dt);
     }
 
     /**
@@ -391,9 +407,204 @@ export default class MonsterManager {
         monster.knockbackVelocityY += velocityY;
     }
 
-    /**
-     * 更新怪物击退状态
-     */
+    private updateEliteRangedAttack(monster: MonsterRuntime, dt: number, baseCarIndex: number): void {
+        if (baseCarIndex < 0 && !this.isHeroInEliteRangedRange(monster)) {
+            monster.attackTimer = 0;
+            return;
+        }
+        if (this.runtime.isMonsterAttackPlaying(monster.node)) {
+            return;
+        }
+
+        monster.attackTimer += dt;
+        if (monster.attackTimer < GameConfig.monster.attackInterval) {
+            return;
+        }
+
+        const target = this.rollEliteRangedTarget(monster, baseCarIndex);
+        if (!target) {
+            monster.attackTimer = 0;
+            return;
+        }
+
+        monster.attackTimer = 0;
+        this.runtime.playMonsterAttack(monster.node);
+        this.spawnEnemyProjectile(monster, target);
+    }
+
+    private spawnEnemyProjectile(monster: MonsterRuntime, target: EliteRangedTarget): void {
+        const node = this.runtime.poolManager.get("enemyProjectile", this.runtime.bulletRoot, () => this.runtime.createEnemyProjectileNode());
+        const config = GameConfig.monster.elite;
+        node.x = monster.node.x + config.projectileFireOffsetX;
+        node.y = monster.node.y + config.projectileFireOffsetY;
+        node.opacity = 255;
+        node.scale = 1;
+        node.setContentSize(config.projectileWidth, config.projectileHeight);
+        const sprite = node.getComponent(cc.Sprite);
+        if (sprite && this.runtime.enemyProjectileSpriteFrame) {
+            sprite.spriteFrame = this.runtime.enemyProjectileSpriteFrame;
+        }
+
+        const direction = this.getDirectionToTarget(cc.v2(node.x, node.y), target.position);
+        node.angle = Math.atan2(direction.y, direction.x) * 180 / Math.PI;
+        node.zIndex = Math.round(-node.y * 10) + 20;
+
+        this.runtime.enemyProjectiles.push({
+            node,
+            targetType: target.type,
+            targetCarIndex: target.carIndex,
+            damage: monster.attack,
+            speed: config.projectileSpeed,
+        });
+    }
+
+    private updateEnemyProjectiles(dt: number): void {
+        const visibleLeft = this.runtime.cameraTrackX - GameConfig.designWidth / 2 - 260;
+        const visibleRight = this.runtime.cameraTrackX + GameConfig.designWidth / 2 + 260;
+
+        for (let index = this.runtime.enemyProjectiles.length - 1; index >= 0; index -= 1) {
+            const projectile = this.runtime.enemyProjectiles[index];
+            if (!projectile || !cc.isValid(projectile.node)) {
+                this.runtime.enemyProjectiles.splice(index, 1);
+                continue;
+            }
+
+            const targetPosition = this.getEnemyProjectileTargetPosition(projectile);
+            if (!targetPosition) {
+                this.recycleEnemyProjectile(index);
+                continue;
+            }
+
+            const currentPosition = cc.v2(projectile.node.x, projectile.node.y);
+            const direction = this.getDirectionToTarget(currentPosition, targetPosition);
+            const moveDistance = projectile.speed * dt;
+            const remainDistance = distance(currentPosition, targetPosition);
+            if (remainDistance <= Math.max(moveDistance, 10)) {
+                projectile.node.x = targetPosition.x;
+                projectile.node.y = targetPosition.y;
+                this.applyEnemyProjectileDamage(projectile);
+                this.recycleEnemyProjectile(index);
+                continue;
+            }
+
+            projectile.node.x += direction.x * moveDistance;
+            projectile.node.y += direction.y * moveDistance;
+            projectile.node.angle = Math.atan2(direction.y, direction.x) * 180 / Math.PI;
+            projectile.node.zIndex = Math.round(-projectile.node.y * 10) + 20;
+
+            if (projectile.node.x < visibleLeft || projectile.node.x > visibleRight || projectile.node.y < -460 || projectile.node.y > 460) {
+                this.recycleEnemyProjectile(index);
+            }
+        }
+    }
+
+    private applyEnemyProjectileDamage(projectile: { targetType: "car" | "hero"; targetCarIndex: number; damage: number }): void {
+        if (projectile.targetType === "car" && projectile.targetCarIndex >= 0 && this.runtime.context.getCarHp(projectile.targetCarIndex) > 0) {
+            this.callbacks.onAttackCar(projectile.damage, undefined, projectile.targetCarIndex);
+            return;
+        }
+        this.callbacks.onAttackHero(projectile.damage);
+    }
+
+    private recycleEnemyProjectile(index: number): void {
+        const projectile = this.runtime.enemyProjectiles[index];
+        this.runtime.enemyProjectiles.splice(index, 1);
+        if (projectile && projectile.node && cc.isValid(projectile.node)) {
+            this.runtime.poolManager.put("enemyProjectile", projectile.node);
+        }
+    }
+
+    private getEliteRangedBaseCarIndex(monster: MonsterRuntime): number {
+        const aliveIndices = this.runtime.context.getAliveCarIndices();
+        if (aliveIndices.length <= 0) {
+            return -1;
+        }
+
+        let targetIndex = aliveIndices[0];
+        let nearestYDistance = Number.MAX_SAFE_INTEGER;
+        aliveIndices.forEach((index) => {
+            const carPosition = this.runtime.getCarWorldPositionByIndex(index);
+            const yDistance = Math.abs(carPosition.y - monster.node.y);
+            if (yDistance < nearestYDistance) {
+                nearestYDistance = yDistance;
+                targetIndex = index;
+            }
+        });
+
+        const targetPosition = this.getCarProjectileTargetPosition(targetIndex);
+        return targetPosition && this.isInEliteRangedHorizontalRange(monster.node.x, targetPosition.x)
+            ? targetIndex
+            : -1;
+    }
+
+    private isHeroInEliteRangedRange(monster: MonsterRuntime): boolean {
+        if (this.runtime.context.playerHp <= 0) {
+            return false;
+        }
+        const heroPosition = this.getHeroProjectileTargetPosition();
+        return this.isInEliteRangedHorizontalRange(monster.node.x, heroPosition.x);
+    }
+
+    private isInEliteRangedHorizontalRange(fromX: number, targetX: number): boolean {
+        return Math.abs(fromX - targetX) <= GameConfig.monster.elite.rangedAttackRange;
+    }
+
+    private rollEliteRangedTarget(monster: MonsterRuntime, baseCarIndex: number): EliteRangedTarget | null {
+        const aliveIndices = this.runtime.context.getAliveCarIndices();
+        if (baseCarIndex >= 0 && aliveIndices.length > 0) {
+            const baseAlivePosition = Math.max(0, aliveIndices.indexOf(baseCarIndex));
+            const roll = Math.random();
+            const layerOffset = roll < 0.4
+                ? 0
+                : roll < 0.8
+                    ? 1
+                    : 2;
+            const targetCarIndex = aliveIndices[baseAlivePosition + layerOffset];
+            if (targetCarIndex !== undefined) {
+                const position = this.getCarProjectileTargetPosition(targetCarIndex);
+                if (position) {
+                    return { type: "car", carIndex: targetCarIndex, position };
+                }
+            }
+        }
+
+        if (this.runtime.context.playerHp <= 0 || !this.isHeroInEliteRangedRange(monster)) {
+            return null;
+        }
+        return { type: "hero", carIndex: -1, position: this.getHeroProjectileTargetPosition() };
+    }
+
+    private getEnemyProjectileTargetPosition(projectile: { targetType: "car" | "hero"; targetCarIndex: number }): cc.Vec2 | null {
+        if (projectile.targetType === "car" && projectile.targetCarIndex >= 0 && this.runtime.context.getCarHp(projectile.targetCarIndex) > 0) {
+            return this.getCarProjectileTargetPosition(projectile.targetCarIndex);
+        }
+        if (this.runtime.context.playerHp <= 0) {
+            return null;
+        }
+        return this.getHeroProjectileTargetPosition();
+    }
+
+    private getCarProjectileTargetPosition(carIndex: number): cc.Vec2 | null {
+        if (carIndex < 0 || this.runtime.context.getCarHp(carIndex) <= 0) {
+            return null;
+        }
+        const position = this.runtime.getCarWorldPositionByIndex(carIndex);
+        return cc.v2(position.x + 8, position.y + 28);
+    }
+
+    private getHeroProjectileTargetPosition(): cc.Vec2 {
+        const position = this.runtime.getHeroWorldPosition();
+        return cc.v2(position.x + 8, position.y + 50);
+    }
+
+    private getDirectionToTarget(from: cc.Vec2, target: cc.Vec2): cc.Vec2 {
+        const direction = cc.v2(target.x - from.x, target.y - from.y);
+        if (direction.magSqr() <= 1) {
+            return cc.v2(-1, 0);
+        }
+        return direction.normalize();
+    }
+
     private updateMonsterKnockback(monster: MonsterRuntime, dt: number): void {
         if (Math.abs(monster.knockbackVelocityX) < MonsterManager.MONSTER_KNOCKBACK_MIN_SPEED
             && Math.abs(monster.knockbackVelocityY) < MonsterManager.MONSTER_KNOCKBACK_MIN_SPEED) {
