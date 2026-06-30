@@ -55,6 +55,12 @@ export interface EnemyProjectileRuntime {
     speed: number;
 }
 
+export interface BombRuntime {
+    node: cc.Node;
+    velocity: cc.Vec2;
+    onHit: (monsterId: number, damage: number, center: cc.Vec2) => void;
+}
+
 export interface RollerRuntime {
     node: cc.Node;
     hitMonsterIds: Record<number, boolean>;

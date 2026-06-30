@@ -170,12 +170,14 @@ export default class BattleView {
         const sawSkillVisible = data.rollerSkillVisible;
         const rollerEnergyEnough = data.energy >= GameConfig.skill.roller.cost;
         const showSkillSwitch = data.phase !== GamePhase.QuestionPause;
-        this.setCostVisibleIfChanged(this.refs.labelBombCost, showSkillSwitch && bombEnergyEnough);
-        this.setCostVisibleIfChanged(this.refs.labelSawtoothCost,  sawSkillVisible && rollerEnergyEnough);
+        const showBombCost = showSkillSwitch && bombEnergyEnough;
+        const showSawtoothCost = showSkillSwitch && sawSkillVisible && rollerEnergyEnough;
+        this.setCostVisibleIfChanged(this.refs.labelBombCost, showBombCost);
+        this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSawtoothCost);
         this.setNodeGroupActiveIfChanged(this.answer1Button, true);
         this.setNodeGroupActiveIfChanged(this.answer2Button, true);
-        this.setNodeGroupActiveIfChanged(this.answer1LabelNode, !bombEnergyEnough);
-        this.setNodeGroupActiveIfChanged(this.answer2LabelNode, sawSkillVisible && !rollerEnergyEnough);
+        this.setNodeGroupActiveIfChanged(this.answer1LabelNode, !showBombCost);
+        this.setNodeGroupActiveIfChanged(this.answer2LabelNode, sawSkillVisible && !showSawtoothCost);
         this.setNodeGroupActiveIfChanged(this.speedButton, data.phase === GamePhase.Battle || data.phase === GamePhase.Boss || data.phase === GamePhase.NormalPause);
         this.updateSpeedButtonPosition();
 

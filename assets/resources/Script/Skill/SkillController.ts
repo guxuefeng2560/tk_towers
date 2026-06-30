@@ -26,6 +26,36 @@ export default class SkillController {
         this.runtime.rollerHiddenRemaining = Math.max(0, this.runtime.rollerHiddenRemaining - dt);
     }
 
+    public updateBombs(dt: number): void {
+        const groundY = GameConfig.monster.laneY - 40;
+        const visibleLeft = this.runtime.cameraTrackX - GameConfig.designWidth / 2 - 280;
+        const visibleRight = this.runtime.cameraTrackX + GameConfig.designWidth / 2 + 360;
+
+        for (let index = this.runtime.bombs.length - 1; index >= 0; index -= 1) {
+            const bomb = this.runtime.bombs[index];
+            if (!bomb || !cc.isValid(bomb.node)) {
+                this.runtime.bombs.splice(index, 1);
+                continue;
+            }
+
+            bomb.velocity.y -= GameConfig.skill.bomb.gravity * dt;
+            bomb.node.x += bomb.velocity.x * dt;
+            bomb.node.y += bomb.velocity.y * dt;
+            bomb.node.angle -= 540 * dt;
+            bomb.node.zIndex = Math.round(-bomb.node.y * 10) + 30;
+
+            if (bomb.node.y <= groundY) {
+                const target = cc.v2(bomb.node.x, groundY);
+                this.explodeBomb(index, target);
+                continue;
+            }
+
+            if (bomb.node.x < visibleLeft || bomb.node.x > visibleRight || bomb.node.y < groundY - 80) {
+                this.recycleBomb(index);
+            }
+        }
+    }
+
     public tryUseSkill(skillType: SkillType, onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void): SkillAttemptResult {
         if (skillType === "roller") {
             if (!this.runtime.context.hasAliveCarSkillUnlocked()) {
@@ -44,9 +74,6 @@ export default class SkillController {
         if (this.runtime.bombCooldown > 0) {
             return { kind: "cooldown" };
         }
-        if (!this.hasBombTarget()) {
-            return { kind: "invalid", reason: "bomb_no_target" };
-        }
         if (this.runtime.context.energy < GameConfig.skill.bomb.cost) {
             return { kind: "needs_energy", skillType, cost: GameConfig.skill.bomb.cost };
         }
@@ -63,7 +90,7 @@ export default class SkillController {
             return true;
         }
 
-        if (this.runtime.bombCooldown > 0 || !this.hasBombTarget()) {
+        if (this.runtime.bombCooldown > 0) {
             return false;
         }
         this.castBomb(onBombHit, false);
@@ -99,7 +126,8 @@ export default class SkillController {
                 }
                 if (rectIntersects(rollerRect, this.runtime.getNodeColliderRect(monster.node, GameConfig.monster.width, GameConfig.monster.height))) {
                     roller.hitMonsterIds[monster.id] = true;
-                    onMonsterHit(monster.id, GameConfig.skill.roller.damage, cc.v2(roller.node.x, roller.node.y));
+                    const damage = GameConfig.skill.roller.damageMultiplier * this.runtime.context.getCarAttack(roller.sourceCarIndex);
+                    onMonsterHit(monster.id, damage, cc.v2(roller.node.x, roller.node.y));
                 }
             }
 
@@ -108,71 +136,6 @@ export default class SkillController {
                 this.runtime.rollers.splice(index, 1);
             }
         }
-    }
-
-    public findBestBombTarget(): cc.Vec2 | null {
-        const monsters = this.getMonstersInBombRange();
-        if (monsters.length === 0) {
-            return null;
-        }
-
-        const gridSize = GameConfig.skill.bomb.gridSize;
-        const heroPos = this.getHeroPosition();
-        const grids: Record<string, { count: number; center: cc.Vec2; monsters: cc.Vec2[] }> = {};
-
-        monsters.forEach((monster) => {
-            const gx = Math.floor(monster.node.x / gridSize);
-            const gy = Math.floor(monster.node.y / gridSize);
-            const key = `${gx}_${gy}`;
-            if (!grids[key]) {
-                grids[key] = {
-                    count: 0,
-                    center: cc.v2(gx * gridSize + gridSize / 2, gy * gridSize + gridSize / 2),
-                    monsters: [],
-                };
-            }
-            grids[key].count += 1;
-            grids[key].monsters.push(cc.v2(monster.node.x, monster.node.y));
-        });
-
-        let best: { count: number; center: cc.Vec2; monsters: cc.Vec2[] } | null = null;
-        Object.keys(grids).forEach((key) => {
-            const grid = grids[key];
-            const currentBest = best;
-            if (!currentBest || grid.count > currentBest.count || (grid.count === currentBest.count && distance(grid.center, heroPos) < distance(currentBest.center, heroPos))) {
-                best = grid;
-            }
-        });
-
-        if (!best) {
-            return null;
-        }
-
-        if (best.monsters.length === 1) {
-            return best.monsters[0];
-        }
-
-        let bestTarget = best.monsters[0];
-        let bestHitCount = -1;
-        let bestDistance = Number.MAX_SAFE_INTEGER;
-
-        best.monsters.forEach((candidate) => {
-            let hitCount = 0;
-            best!.monsters.forEach((monsterPosition) => {
-                if (distance(candidate, monsterPosition) <= GameConfig.skill.bomb.explosionRadius) {
-                    hitCount += 1;
-                }
-            });
-
-            const candidateDistance = distance(candidate, heroPos);
-            if (hitCount > bestHitCount || (hitCount === bestHitCount && candidateDistance < bestDistance)) {
-                bestHitCount = hitCount;
-                bestDistance = candidateDistance;
-                bestTarget = candidate;
-            }
-        });
-
-        return bestTarget;
     }
 
     public damageMonstersInBombRange(target: cc.Vec2, onMonsterHit: (monsterId: number, damage: number, center: cc.Vec2) => void): void {
@@ -206,7 +169,7 @@ export default class SkillController {
             spine.skeletonData = this.runtime.bombEffectSpineData;
             spine.setCompleteListener(null);
             spine.clearTracks();
-            spine.setAnimation(0, SkillController.BOMB_EFFECT_ANIMATION, false);
+            spine.setAnimation(0, "h1", false);
         }
 
         this.runtime.effects.push({
@@ -262,31 +225,54 @@ export default class SkillController {
     }
 
     private castBomb(onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void, consumeEnergy: boolean = true): void {
-        const target = this.findBestBombTarget();
-        if (!target) {
-            return;
-        }
-
         if (consumeEnergy) {
             this.runtime.context.energy -= GameConfig.skill.bomb.cost;
         }
         this.runtime.context.bombUseCount += 1;
         this.runtime.bombCooldown = GameConfig.skill.bomb.cooldown;
-        AudioManager.getInstance().playSFX(AudioID.AudioID_Boom);
+        this.spawnBombProjectile(onBombHit);
+    }
+
+    private spawnBombProjectile(onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void): void {
+        const node = this.runtime.poolManager.get("bomb", this.runtime.bulletRoot, () => this.runtime.createBombNode());
+        const sprite = node.getComponent(cc.Sprite);
+        if (sprite && this.runtime.bombSpriteFrame) {
+            sprite.spriteFrame = this.runtime.bombSpriteFrame;
+        }
+
+        const startPosition = this.runtime.getWeaponWorldPosition();
+        node.x = startPosition.x;
+        node.y = startPosition.y;
+        node.angle = 0;
+        node.opacity = 255;
+        node.scale = 0.5;
+        node.setContentSize(GameConfig.skill.bomb.size, GameConfig.skill.bomb.size);
+        node.zIndex = Math.round(-node.y * 10) + 30;
+
+        this.runtime.bombs.push({
+            node,
+            velocity: cc.v2(GameConfig.skill.bomb.initialVelocity.x, GameConfig.skill.bomb.initialVelocity.y),
+            onHit: onBombHit,
+        });
+    }
+
+    private explodeBomb(index: number, target: cc.Vec2): void {
+        const bomb = this.runtime.bombs[index];
+        if (!bomb) {
+            return;
+        }
+
         this.spawnBombEffect(target);
-        this.damageMonstersInBombRange(target, onBombHit);
+        this.damageMonstersInBombRange(target, bomb.onHit);
+        AudioManager.getInstance().playSFX(AudioID.AudioID_Boom);
+        this.recycleBomb(index);
     }
 
-    private hasBombTarget(): boolean {
-        return this.getMonstersInBombRange().length > 0;
-    }
-
-    private getMonstersInBombRange() {
-        const heroPos = this.getHeroPosition();
-        return this.runtime.monsters.filter((monster) => !monster.dying && distance(heroPos, cc.v2(monster.node.x, monster.node.y)) <= GameConfig.skill.bomb.searchRadius);
-    }
-
-    private getHeroPosition(): cc.Vec2 {
-        return this.runtime.getHeroWorldPosition();
+    private recycleBomb(index: number): void {
+        const bomb = this.runtime.bombs[index];
+        this.runtime.bombs.splice(index, 1);
+        if (bomb && bomb.node && cc.isValid(bomb.node)) {
+            this.runtime.poolManager.put("bomb", bomb.node);
+        }
     }
 }

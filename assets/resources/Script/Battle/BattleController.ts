@@ -78,6 +78,7 @@ export default class BattleController {
             this.monsterManager.damageMonsterById(monsterId, damage, "roller");
             this.monsterManager.applyRollerKnockback(monsterId);
         });
+        this.skillController.updateBombs(dt);
         this.updateEffects(dt);
         this.tryEnterBossPhase();
         this.checkFailState();
