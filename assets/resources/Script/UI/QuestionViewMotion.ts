@@ -1,3 +1,6 @@
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
+
 export interface QuestionViewMotionData {
     [key: string]: any;
 }
@@ -27,6 +30,7 @@ export function openQuestionViewFrom(host: QuestionViewMotionHost, anchorNode: c
     const startPosition = host.getAnchorPosition(anchorNode);
     const restPosition = host.getRestPosition();
     if (host.contentRoot) {
+        AudioManager.getInstance().playSFX(AudioID.AudioID_ui_open);
         host.contentRoot.opacity = 0;
         host.contentRoot.scale = anchorNode ? 0.25 : 0.8;
         host.contentRoot.setPosition(startPosition);
@@ -56,10 +60,12 @@ export function closeQuestionViewTo(host: QuestionViewMotionHost, anchorNode: cc
         return;
     }
 
+
     host.inputLocked = true;
     const targetPosition = host.getAnchorPosition(anchorNode);
 
     if (host.contentRoot) {
+        AudioManager.getInstance().playSFX(AudioID.AudioID_ui_open);
         host.contentRoot.stopAllActions();
         host.contentRoot.runAction(
             cc.sequence(
@@ -72,6 +78,9 @@ export function closeQuestionViewTo(host: QuestionViewMotionHost, anchorNode: cc
                     host.hideImmediate();
                     if (onComplete) {
                         onComplete();
+                    }
+                    if (anchorNode.name == "BtnCode") {
+                        AudioManager.getInstance().playSFX(AudioID.AudioID_error_code);
                     }
                 }),
             ),

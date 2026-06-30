@@ -9,6 +9,8 @@ import BattleController from "../Battle/BattleController";
 import { BattleViewData } from "../UI/BattleView";
 import { ResultViewData } from "../UI/ResultView";
 import UIManager from "../UI/UIManager";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 
 export default class GameFlowController {
     private static readonly FAIL_RESULT_DELAY = 1;
@@ -59,6 +61,7 @@ export default class GameFlowController {
     }
 
     public destroy(): void {
+        this.stopCarMoveAudio();
         this.runtime.destroy();
     }
 
@@ -76,6 +79,7 @@ export default class GameFlowController {
     }
 
     public resetRun(fullProgressReset: boolean): void {
+        this.stopCarMoveAudio();
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow();
         this.uiManager.renderResult(null);
@@ -338,6 +342,9 @@ export default class GameFlowController {
             : GameConfig.campaign.interRoundAdvanceDistance;
         const advanceDistance = Math.min(this.interRoundAdvanceRemaining, speed * dt);
         this.interRoundAdvanceRemaining = Math.max(0, this.interRoundAdvanceRemaining - advanceDistance);
+        if (advanceDistance > 0) {
+            AudioManager.getInstance().playLoopingSFX(AudioID.AudioID_car_move);
+        }
         this.runtime.context.reachedDistance += advanceDistance;
         this.runtime.updateActorPlacement();
         this.runtime.syncCameraToCurrentDistance();
@@ -348,6 +355,7 @@ export default class GameFlowController {
     }
 
     private finishInterRoundAdvance(): void {
+        this.stopCarMoveAudio();
         this.interRoundAdvanceRemaining = 0;
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow(true);
@@ -366,6 +374,7 @@ export default class GameFlowController {
     }
 
     private returnToPrepareFromFail(): void {
+        this.stopCarMoveAudio();
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow();
         this.runtime.context.resetBattleRuntimeForRetryFromFirstRound();
@@ -388,6 +397,7 @@ export default class GameFlowController {
             this.prepareFlowLocked = false;
         }
 
+        const previousPhase = this.runtime.context.phase;
         this.runtime.context.phase = phase;
         if (phase === GamePhase.Battle || phase === GamePhase.Boss) {
             this.timeController.resumeBattleTime();
@@ -396,6 +406,8 @@ export default class GameFlowController {
         }
 
         this.uiManager.setPhase(phase);
+        this.syncPhaseMusic(phase, previousPhase);
+        this.syncPhaseCarMoveAudio(phase);
         this.refreshBattleAndResultUi();
 
         if (phase === GamePhase.Prepare) {
@@ -409,6 +421,27 @@ export default class GameFlowController {
         } else {
             this.uiManager.hideQuestion();
         }
+    }
+
+    private syncPhaseMusic(phase: GamePhase, previousPhase: GamePhase): void {
+        if (phase === GamePhase.Prepare) {
+            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_PREPARE);
+            return;
+        }
+
+        if (phase === GamePhase.Battle && previousPhase !== GamePhase.QuestionPause) {
+            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BATTLE);
+        }
+    }
+
+    private syncPhaseCarMoveAudio(phase: GamePhase): void {
+        if (phase !== GamePhase.Battle && phase !== GamePhase.Boss && phase !== GamePhase.NormalPause) {
+            this.stopCarMoveAudio();
+        }
+    }
+
+    private stopCarMoveAudio(): void {
+        this.battleController.stopCarMoveAudio();
     }
 
     private refreshPrepareUi(visibleTaskKeyOverride?: PrepareTaskKey | null, onTaskVisibilitySettled?: () => void): void {

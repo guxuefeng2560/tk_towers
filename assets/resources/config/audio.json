@@ -4,10 +4,18 @@
         {"id":"2", "path":"audio/sfx/boom", "loop":false, "volume":"1", "reload":false},
         {"id":"3", "path":"audio/sfx/die1", "loop":false, "volume":"0.5", "reload":false},
         {"id":"4", "path":"audio/sfx/gunzi", "loop":false, "volume":"1", "reload":false},
-        {"id":"5", "path":"audio/sfx/shoot", "loop":false, "volume":"1", "reload":false}
+        {"id":"5", "path":"audio/sfx/shoot", "loop":false, "volume":"1", "reload":false},
+        {"id":"6", "path":"audio/sfx/car_move", "loop":false, "volume":"1", "reload":false},
+        {"id":"7", "path":"audio/sfx/ui_open", "loop":false, "volume":"1", "reload":false},
+        {"id":"8", "path":"audio/sfx/car_upgrade", "loop":false, "volume":"1", "reload":false},
+        {"id":"9", "path":"audio/sfx/error_code", "loop":false, "volume":"1", "reload":false},
+        {"id":"10", "path":"audio/sfx/skill_sting", "loop":false, "volume":"1", "reload":false},
+        {"id":"11", "path":"audio/sfx/nest_destroyed", "loop":false, "volume":"1", "reload":false},
+        {"id":"12", "path":"audio/sfx/fly_knife", "loop":false, "volume":"1", "reload":false}
     ],
     "Music":[
         {"id":"98", "path":"audio/sfx/battle_music", "loop":true, "volume":"1", "reload":false},
-        {"id":"99", "path":"audio/sfx/battle_music1", "loop":true, "volume":"0.8", "reload":false}
+        {"id":"99", "path":"audio/sfx/prepare_music", "loop":true, "volume":"0.8", "reload":false},
+        {"id":"100", "path":"audio/sfx/boss_music", "loop":true, "volume":"0.8", "reload":false}
     ]
 }

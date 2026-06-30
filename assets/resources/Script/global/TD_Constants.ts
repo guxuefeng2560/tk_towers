@@ -22,11 +22,27 @@ export const enum AudioID {
     AudioID_enemy_attack = 4,
     /** 英雄攻击 */
     AudioID_hero_attack = 5,
+    /** 车辆行驶 */
+    AudioID_car_move = 6,
+    /** UI弹出收起 */
+    AudioID_ui_open = 7,
+    /** 战车升级 */
+    AudioID_car_upgrade = 8,
+    /** 题目收到错题集 */
+    AudioID_error_code = 9,
+    /** 木刺大招 */
+    AudioID_sting = 10,
+    /** 巢穴被摧毁 */
+    AudioID_nest_destroy = 11,
+    /** 敌人飞刀 */
+    AudioID_fly_knife = 12,
 
     /** 战斗背景音乐 */
     AudioID_BGM_BATTLE = 98,
-    /** 战斗背景音乐 */
-    AudioID_BGM_BATTLE1 = 99,
+    /** 预备阶段背景音乐 */
+    AudioID_BGM_PREPARE= 99,
+    /** BOSS阶段背景音乐 */
+    AudioID_BGM_BOSS= 100,
 }
 
 export class Constants {

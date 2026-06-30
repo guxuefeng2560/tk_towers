@@ -1,5 +1,7 @@
 import { PrepareTaskKey } from "../Core/GameDefines";
 import { SceneRefs } from "../Core/SceneRefs";
+import AudioManager from "../Framework/audio/TD_AudioManager";
+import { AudioID } from "../global/TD_Constants";
 import { formatCompactK } from "../Util/NumberFormatUtil";
 
 export interface PrepareTaskViewState {
@@ -79,7 +81,10 @@ export default class PrepareView {
         this.skipButton = this.createSkipButton(target, onSkipPrepare);
 
         if (this.startButton) {
-            this.startButton.on(cc.Node.EventType.TOUCH_END, onStartBattle, target);
+            this.startButton.on(cc.Node.EventType.TOUCH_END, () => {
+                AudioManager.getInstance().playSFX(AudioID.AudioID_Btn_Click);
+                onStartBattle();
+            }, target);
         }
         if (this.refs.btnCode) {
             this.refs.btnCode.active = true;

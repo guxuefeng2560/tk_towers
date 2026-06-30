@@ -456,6 +456,7 @@ export default class MonsterManager {
             damage: monster.attack,
             speed: config.projectileSpeed,
         });
+        AudioManager.getInstance().playSFX(AudioID.AudioID_fly_knife);
     }
 
     private updateEnemyProjectiles(dt: number): void {

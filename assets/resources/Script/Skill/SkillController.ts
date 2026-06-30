@@ -193,6 +193,7 @@ export default class SkillController {
         this.runtime.context.rollerUseCount += 1;
         this.runtime.rollerCooldown = GameConfig.skill.roller.cooldown;
         this.runtime.rollerHiddenRemaining = GameConfig.skill.roller.hideDuration;
+        AudioManager.getInstance().playSFX(AudioID.AudioID_sting);
 
         for (const sourceCarIndex of sourceCarIndices) {
             const node = this.runtime.poolManager.get("roller", this.runtime.effectRoot, () => {

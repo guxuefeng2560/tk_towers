@@ -3,10 +3,9 @@ import GameRuntime from "./Core/GameRuntime";
 import { GamePhase } from "./Core/GameDefines";
 import { distance } from "./Util/MathUtil";
 import { SceneRefs } from "./Core/SceneRefs";
-import { AudioID } from "./global/TD_Constants";
-import AudioManager from "./Framework/audio/TD_AudioManager";
 import ResModuleManager from "./Framework/moduleManager/TD_ResModuleManager";
 import Global from "./global/TD_Global";
+import AudioManager from "./Framework/audio/TD_AudioManager";
 
 const { ccclass, property } = cc._decorator;
 
@@ -216,15 +215,11 @@ export default class TowerDefenseScene extends cc.Component {
         this.runtime = new GameRuntime(refs);
         this.runtime.initializeScene();
         this.setShootLineVisible(false);
+        ResModuleManager.init(Global.game_id, Global.game_id);
+        AudioManager.getInstance();
         this.flowController = new GameFlowController(this.runtime, this);
         this.flowController.initialize();
         this.registerTouchEvents();
-
-        ResModuleManager.init(Global.game_id, Global.game_id);
-        AudioManager.getInstance();
-        this.scheduleOnce(function() {
-            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BATTLE1);
-        }, 1.0)
     }
 
     protected update(dt: number): void {

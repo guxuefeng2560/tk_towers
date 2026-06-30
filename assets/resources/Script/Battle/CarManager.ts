@@ -75,10 +75,12 @@ export default class CarManager {
      */
     public updateCarMovement(dt: number): void {
         if (this.runtime.context.phase === GamePhase.Boss && !this.runtime.bossEntranceActive) {
+            this.stopCarMoveAudio();
             return;
         }
 
         const moveSpeed = this.getCurrentCarSpeed();
+        this.syncCarMoveAudio(moveSpeed > 0 && dt > 0);
         this.runtime.context.reachedDistance += moveSpeed * dt;
 
         if (moveSpeed > 0) {
@@ -102,6 +104,10 @@ export default class CarManager {
         const speedFactor = 1 - GameConfig.monster.slowFactorPerMonster * contactCount;
         const searchSpeedMultiplier = 1;//this.hasAttackableTargetInRange() ? 1 : CarManager.SEARCH_MOVE_SPEED_MULTIPLIER;
         return Math.max(0, GameConfig.car.baseSpeed * speedFactor * searchSpeedMultiplier);
+    }
+
+    public stopCarMoveAudio(): void {
+        AudioManager.getInstance().stopLoopingSFX(AudioID.AudioID_car_move);
     }
 
     /**
@@ -266,6 +272,15 @@ export default class CarManager {
         }
 
         return result ? { index: result.index, contactFrontX: result.contactFrontX } : null;
+    }
+
+    private syncCarMoveAudio(isMoving: boolean): void {
+        if (isMoving) {
+            AudioManager.getInstance().playLoopingSFX(AudioID.AudioID_car_move);
+            return;
+        }
+
+        this.stopCarMoveAudio();
     }
 
     /**

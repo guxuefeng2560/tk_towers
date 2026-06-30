@@ -126,6 +126,7 @@ export default class BattleController {
     }
 
     public enterQuestionPauseVisualState(): void {
+        this.stopCarMoveAudio();
         this.runtime.playHeroIdle();
         this.runtime.monsters.forEach((monster) => {
             if (!monster.dying) {
@@ -185,8 +186,13 @@ export default class BattleController {
     }
 
     public clearBattle(): void {
+        this.stopCarMoveAudio();
         this.runtime.clearBattleObjects();
         this.failSequenceTriggered = false;
+    }
+
+    public stopCarMoveAudio(): void {
+        this.carManager.stopCarMoveAudio();
     }
 
     private updateEnergy(dt: number): void {
@@ -206,6 +212,7 @@ export default class BattleController {
         const isFinalBossRound = this.runtime.context.currentRound >= GameConfig.campaign.totalRounds;
         this.runtime.bossPreSpawnRemaining = isFinalBossRound ? GameConfig.monster.bossPreSpawnCount : 0;
         if (isFinalBossRound) {
+            AudioManager.getInstance().playMusic(AudioID.AudioID_BGM_BOSS);
             this.monsterManager.spawnBossPreWave();
         }
         this.runtime.placeBossAtScreenRight();
@@ -220,12 +227,14 @@ export default class BattleController {
         }
 
         const bossNode = this.runtime.refs.bossNode;
+        const previousBossHp = this.runtime.bossHp;
         this.runtime.bossHp = Math.max(0, this.runtime.bossHp - damage);
         if (bossNode) {
             const bossCenter = this.runtime.getBossCenterWorldPosition();
             this.runtime.spawnFloatText(bossCenter.x, bossCenter.y + 110, `-${Math.ceil(damage)}`, new cc.Color(255, 226, 100, 255));
         }
-        if (this.runtime.bossHp <= 0) {
+        if (previousBossHp > 0 && this.runtime.bossHp <= 0) {
+            AudioManager.getInstance().playSFX(AudioID.AudioID_nest_destroy);
             this.finishBattle(true);
         }
     }
@@ -286,6 +295,7 @@ export default class BattleController {
     }
 
     private finishBattle(isWin: boolean): void {
+        this.stopCarMoveAudio();
         this.runtime.clearBattleObjects();
         this.failSequenceTriggered = false;
         this.callbacks.onBattleFinished(isWin);

@@ -29,6 +29,9 @@ export default class AudioManager extends Singleton {
 
     private audioMap = [];
     private _sfxLastPlayTimeById: { [id: number]: number } = {};
+    private _loopingSfxAudioIdById: { [id: number]: number } = {};
+    private _loopingSfxLoadPendingById: { [id: number]: boolean } = {};
+    private _loopingSfxTokenById: { [id: number]: number } = {};
     private _currentMusicId: number = -1;
     // 配置未加载完成前挂起的待播放音乐ID（加载完成后自动补播）
     private _pendingMusicId: number = -1;
@@ -55,6 +58,9 @@ export default class AudioManager extends Singleton {
     stopAll() {
         cc.audioEngine.stopAll();
         this._currentMusicId = -1;
+        this._loopingSfxAudioIdById = {};
+        this._loopingSfxLoadPendingById = {};
+        this._loopingSfxTokenById = {};
     }
 
     stopSFX(audioID: number) {
@@ -165,6 +171,58 @@ export default class AudioManager extends Singleton {
         return audioId;
     }
 
+    playLoopingSFX(id: number): number {
+        if (!this.isRuntimeActive()) {
+            return -1;
+        }
+
+        const existingAudioId = this._loopingSfxAudioIdById[id];
+        if (existingAudioId !== undefined && existingAudioId !== -1) {
+            return existingAudioId;
+        }
+
+        if (!this._isLoaded) {
+            TKLog.LogWarn("AudioConfig.playLoopingSFX config is not loaded.");
+            return -1;
+        }
+
+        const item = this._sfx[id];
+        if (item == null) {
+            TKLog.LogWarn("AudioConfig.playLoopingSFX missing config:", id);
+            return -1;
+        }
+
+        if (item.clip == null) {
+            if (this._loopingSfxLoadPendingById[id]) {
+                return -1;
+            }
+
+            this._loopingSfxLoadPendingById[id] = true;
+            const token = this.getNextLoopingSfxToken(id);
+            item.Load((config: AudioConfigItem) => {
+                this._loopingSfxLoadPendingById[id] = false;
+                if (!this.isRuntimeActive() || this._loopingSfxTokenById[id] !== token) {
+                    return;
+                }
+                this.startLoopingSFX(id, config);
+            }, this.isRuntimeActive.bind(this));
+            return -1;
+        }
+
+        this.getNextLoopingSfxToken(id);
+        return this.startLoopingSFX(id, item);
+    }
+
+    stopLoopingSFX(id: number): void {
+        this.getNextLoopingSfxToken(id);
+        this._loopingSfxLoadPendingById[id] = false;
+        const audioId = this._loopingSfxAudioIdById[id];
+        if (audioId !== undefined && audioId !== -1) {
+            cc.audioEngine.stop(audioId);
+        }
+        delete this._loopingSfxAudioIdById[id];
+    }
+
     playSFXByURL(url: string): number {
         if (!this.isRuntimeActive() || this._volume === 0) {
             return -1;
@@ -259,6 +317,23 @@ export default class AudioManager extends Singleton {
 
     private _play(item: AudioConfigItem): number {
         return cc.audioEngine.play(item.clip, item.loop, item.volume * this._volume);
+    }
+
+    private startLoopingSFX(id: number, item: AudioConfigItem): number {
+        const existingAudioId = this._loopingSfxAudioIdById[id];
+        if (existingAudioId !== undefined && existingAudioId !== -1) {
+            return existingAudioId;
+        }
+
+        const audioId = cc.audioEngine.play(item.clip, true, item.volume * this._volume);
+        this._loopingSfxAudioIdById[id] = audioId;
+        return audioId;
+    }
+
+    private getNextLoopingSfxToken(id: number): number {
+        const token = (this._loopingSfxTokenById[id] || 0) + 1;
+        this._loopingSfxTokenById[id] = token;
+        return token;
     }
 
     private _readCate(rootJson: any, container: { [id: number]: AudioConfigItem }) {
