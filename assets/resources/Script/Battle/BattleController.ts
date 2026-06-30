@@ -57,7 +57,7 @@ export default class BattleController {
     public startBattle(): void {
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow();
-        this.runtime.bossHp = GameConfig.boss.hp;
+        this.runtime.bossHp = this.runtime.getBossHpForCurrentRound();
         this.runtime.resetActorPlacement();
         this.failSequenceTriggered = false;
         this.runtime.context.phase = GamePhase.Battle;
@@ -158,7 +158,7 @@ export default class BattleController {
             sawMaxHp: this.runtime.context.sawCarMaxHp,
             showBoss: this.runtime.context.phase === GamePhase.Boss || this.runtime.context.phase === GamePhase.Win,
             bossHp: this.runtime.bossHp,
-            bossMaxHp: GameConfig.boss.hp,
+            bossMaxHp: this.runtime.getBossHpForCurrentRound(),
             infoText: [
                 `\u7b2c${this.runtime.context.currentRound}/${GameConfig.campaign.totalRounds} \u8f6e`,
                 `\u9636\u6bb5\uff1a${GamePhase[this.runtime.context.phase]}`,
@@ -200,7 +200,7 @@ export default class BattleController {
 
         this.runtime.context.reachedDistance = bossTriggerDistance;
         this.runtime.updateActorPlacement();
-        this.runtime.bossHp = GameConfig.boss.hp;
+        this.runtime.bossHp = this.runtime.getBossHpForCurrentRound();
         this.runtime.bossSpawnTimer = 0;
         const isFinalBossRound = this.runtime.context.currentRound >= GameConfig.campaign.totalRounds;
         this.runtime.bossPreSpawnRemaining = isFinalBossRound ? GameConfig.monster.bossPreSpawnCount : 0;

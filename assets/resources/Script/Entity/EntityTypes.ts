@@ -1,5 +1,5 @@
 export type SkillType = "roller" | "bomb";
-export type MonsterKind = "normal" | "elite";
+export type MonsterKind = "normal" | "elite" | "langtou";
 
 export interface UiBarLike {
     root: cc.Node;

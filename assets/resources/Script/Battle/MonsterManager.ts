@@ -88,7 +88,7 @@ export default class MonsterManager {
             const spawnInterval = 1 / spawnRate;
             while (this.runtime.spawnTimer >= spawnInterval) {
                 this.runtime.spawnTimer -= spawnInterval;
-                this.spawnMonster(this.getRightScreenMonsterSpawnX(), undefined, "normal");
+                this.spawnMonster(this.getRightScreenMonsterSpawnX(), undefined, this.rollCurrentWaveMonsterKind());
             }
             return;
         }
@@ -344,7 +344,11 @@ export default class MonsterManager {
         node.opacity = 255;
 
         const monster = (node as any).__runtime;
-        const config = kind === "elite" ? GameConfig.monster.elite : GameConfig.monster.normal;
+        const config = kind === "elite"
+            ? GameConfig.monster.elite
+            : kind === "langtou"
+                ? GameConfig.monster.langtou
+                : GameConfig.monster.normal;
         monster.id = this.runtime.monsterIdSeed;
         monster.kind = kind;
         monster.laneIndex = laneIndex;
@@ -678,7 +682,37 @@ export default class MonsterManager {
     }
 
     private rollBossMonsterKind(): MonsterKind {
-        return Math.random() < GameConfig.monster.bossPreSpawnNormalRatio ? "normal" : "elite";
+        const ratios = this.runtime.getCurrentBossWaveConfig().monsterRatios;
+        const total = ratios.normal + ratios.elite + ratios.langtou;
+        if (total <= 0) {
+            return "normal";
+        }
+
+        const roll = Math.random() * total;
+        if (roll < ratios.normal) {
+            return "normal";
+        }
+        if (roll < ratios.normal + ratios.elite) {
+            return "elite";
+        }
+        return "langtou";
+    }
+
+    private rollCurrentWaveMonsterKind(): MonsterKind {
+        const ratios = this.runtime.getCurrentBossWaveConfig().monsterRatios;
+        const total = ratios.normal + ratios.elite + ratios.langtou;
+        if (total <= 0) {
+            return "normal";
+        }
+
+        const roll = Math.random() * total;
+        if (roll < ratios.normal) {
+            return "normal";
+        }
+        if (roll < ratios.normal + ratios.elite) {
+            return "elite";
+        }
+        return "langtou";
     }
 
     private buildMonsterFrameCaches(): MonsterFrameCaches {

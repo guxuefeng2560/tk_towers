@@ -95,7 +95,7 @@ export default class GameFlowController {
         this.battleQuestionIndexInRound = 0;
         this.lastBattleViewData = null;
         this.lastResultViewData = null;
-        this.runtime.bossHp = GameConfig.boss.hp;
+        this.runtime.bossHp = this.runtime.getBossHpForCurrentRound();
         this.runtime.resetActorPlacement();
         this.changePhase(GamePhase.Prepare);
     }
@@ -352,7 +352,7 @@ export default class GameFlowController {
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow(true);
         this.runtime.context.resetBattleRuntimeForNextRoundPrepare();
-        this.runtime.bossHp = GameConfig.boss.hp;
+        this.runtime.bossHp = this.runtime.getBossHpForCurrentRound();
         this.runtime.resetActorPlacement();
         this.prepareController.prepareNextRoundQuestions();
         this.battleQuestionIndexInRound = 0;
@@ -369,7 +369,7 @@ export default class GameFlowController {
         this.runtime.clearBattleObjects();
         this.runtime.resetTransientFlow();
         this.runtime.context.resetBattleRuntimeForRetryFromFirstRound();
-        this.runtime.bossHp = GameConfig.boss.hp;
+        this.runtime.bossHp = this.runtime.getBossHpForCurrentRound();
         this.runtime.resetActorPlacement();
         this.prepareController.prepareCurrentRoundQuestions();
         this.battleQuestionIndexInRound = 0;

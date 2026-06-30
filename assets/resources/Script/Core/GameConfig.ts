@@ -63,6 +63,10 @@ export const GameConfig = {
             hp: 180,
             attack: 350,
         },
+        langtou: {
+            hp: 200,
+            attack: 350,
+        },
         glowRateRound: 1.1,
         battleSpawnPhases: [
             { start: 0, end: 10, rate: 0.5 },
@@ -72,12 +76,10 @@ export const GameConfig = {
         ],
         bossSpawnPerSecond: 3,
         bossPreSpawnCount: 14,
-        bossPreSpawnNormalRatio: 0.3,
     },
 
     boss: {
         x: 5100,
-        hp: 6800,
         spawnX: 5200,
         maxMonsterCount: 40,
         maxVisibleMonsterCount: 18,
@@ -85,6 +87,38 @@ export const GameConfig = {
         stopScreenOffsetX: 150,
         width: 160,
         height: 180,
+        waves: [
+            {
+                round: 1,
+                bossHp: 6800,
+                monsterRatios: { normal: 1, elite: 0, langtou: 0 },
+                remark: "-",
+            },
+            {
+                round: 2,
+                bossHp: 13600,
+                monsterRatios: { normal: 0.7, elite: 0.3, langtou: 0 },
+                remark: "-",
+            },
+            {
+                round: 3,
+                bossHp: 20400,
+                monsterRatios: { normal: 0.5, elite: 0.4, langtou: 0.1 },
+                remark: "-",
+            },
+            {
+                round: 4,
+                bossHp: 27200,
+                monsterRatios: { normal: 0.4, elite: 0.4, langtou: 0.2 },
+                remark: "-",
+            },
+            {
+                round: 5,
+                bossHp: 40000,
+                monsterRatios: { normal: 0.3, elite: 0.5, langtou: 0.2 },
+                remark: "终极 BOSS",
+            },
+        ],
     },
 
     skill: {

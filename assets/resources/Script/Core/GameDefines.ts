@@ -41,6 +41,19 @@ export enum PrepareTaskKey {
     Energy = "energy",
 }
 
+export interface BossMonsterRatios {
+    normal: number;
+    elite: number;
+    langtou: number;
+}
+
+export interface BossWaveConfig {
+    round: number;
+    bossHp: number;
+    monsterRatios: BossMonsterRatios;
+    remark: string;
+}
+
 export interface QuestionOption {
     id: string;
     text: string;

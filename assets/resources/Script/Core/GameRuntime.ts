@@ -18,6 +18,7 @@ export default class GameRuntime {
         "Texture/battleRes/box2",
         "Texture/battleRes/box3",
         "Texture/battleRes/box4",
+        "Texture/battleRes/box5",
     ];
     private static readonly ROLLER_SPRITE_PATH = "Texture/battleUI/ci1";
     private static readonly SHIELD_SPRITE_PATH = "Texture/battleRes/def";
@@ -52,6 +53,7 @@ export default class GameRuntime {
     public monsterSpineData: Record<MonsterKind, sp.SkeletonData | null> = {
         normal: null,
         elite: null,
+        langtou: null,
     };
 
     public farMapLayout: cc.Node = null;
@@ -69,7 +71,7 @@ export default class GameRuntime {
     public forcedAimDistance = 0;
 
     public monsterIdSeed = 1;
-    public bossHp = GameConfig.boss.hp;
+    public bossHp = GameConfig.boss.waves[0]?.bossHp || 0;
     public cameraTrackX = 0;
 
     public shootTimer = 0;
@@ -941,11 +943,18 @@ export default class GameRuntime {
             this.monsterSpineData.normal = data;
         });
 
-        resources.load("Texture/spine/monster/bangzi", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
+        resources.load("Texture/spine/monster/feibiao", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
             if (error || !data) {
                 return;
             }
             this.monsterSpineData.elite = data;
+        });
+
+        resources.load("Texture/spine/monster/langtou", sp.SkeletonData, (error: Error | null, data: sp.SkeletonData) => {
+            if (error || !data) {
+                return;
+            }
+            this.monsterSpineData.langtou = data;
         });
     }
 
@@ -1060,6 +1069,15 @@ export default class GameRuntime {
             sprite.spriteFrame = spriteFrame;
             iconNode.setContentSize(spriteFrame.getOriginalSize());
         }
+    }
+
+    public getCurrentBossWaveConfig(): { round: number; bossHp: number; monsterRatios: { normal: number; elite: number; langtou: number }; remark: string } {
+        const roundIndex = Math.max(0, Math.min(GameConfig.boss.waves.length - 1, this.context.currentRound - 1));
+        return GameConfig.boss.waves[roundIndex] || GameConfig.boss.waves[0];
+    }
+
+    public getBossHpForCurrentRound(): number {
+        return this.getCurrentBossWaveConfig().bossHp;
     }
 
     private applyWorldAnchors(): void {
@@ -1445,7 +1463,7 @@ export default class GameRuntime {
             this.refs.bossProgressBar.progress = 1;
         }
         if (this.refs.bossHpLabel) {
-            this.refs.bossHpLabel.string = `${Math.ceil(this.bossHp)} / ${GameConfig.boss.hp}`;
+            this.refs.bossHpLabel.string = `${Math.ceil(this.bossHp)} / ${this.getBossHpForCurrentRound()}`;
         }
     }
 
@@ -1580,6 +1598,10 @@ export default class GameRuntime {
     }
 
     private getCarBodySpriteFrame(index: number): cc.SpriteFrame | null {
+        if (this.context.getCarDefenseUnlocked(index)) {
+            return this.carBodySpriteFrames[4] || null;
+        }
+
         const hpUpgradeLevel = Math.max(0, Math.min(
             this.carBodySpriteFrames.length - 1,
             this.context.getCarHpUpgradeLevel(index),
