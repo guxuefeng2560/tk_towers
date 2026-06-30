@@ -8999,7 +8999,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 56.83,
+      "width": 44,
       "height": 29.2
     },
     "_anchorPoint": {
@@ -9051,8 +9051,8 @@
     ],
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
-    "_string": "-80%",
-    "_N$string": "-80%",
+    "_string": "题目",
+    "_N$string": "题目",
     "_fontSize": 20,
     "_lineHeight": 20,
     "_enableWrapText": true,
