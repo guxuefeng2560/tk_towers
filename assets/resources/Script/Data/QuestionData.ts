@@ -14,7 +14,7 @@ import WordsConfig, { WordsConfigItem } from "./WordsConfig";
 type QuestionBankItem = Omit<QuestionItem, "id">;
 
 const QUESTION_SET_COUNT = 6;
-const ROUND_TO_QUESTION_SET_INDEX = [2, 0, 4, 2, 3, 5];
+const ROUND_TO_QUESTION_SET_INDEX = [0, 4, 2, 3, 5];
 const DEFAULT_UNIT_ID = 1;
 
 function toText(value: string | number | null | undefined): string {
@@ -43,6 +43,28 @@ function getCorrectIndex(rawCorrectOption: number | null, optionCount: number): 
 
 function makeOption(id: string, text: string): QuestionOption {
     return { id, text };
+}
+
+function shuffleOptions<T>(items: T[]): T[] {
+    const result = items.slice();
+    for (let index = result.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        const temp = result[index];
+        result[index] = result[swapIndex];
+        result[swapIndex] = temp;
+    }
+    return result;
+}
+
+function makeShuffledOrderingOptions(correctOptions: QuestionOption[]): QuestionOption[] {
+    const displayOptions = shuffleOptions(correctOptions);
+    const isSameAsCorrect = displayOptions.every((option, index) => option.id === correctOptions[index].id);
+    if (isSameAsCorrect && displayOptions.length > 1) {
+        const temp = displayOptions[0];
+        displayOptions[0] = displayOptions[1];
+        displayOptions[1] = temp;
+    }
+    return displayOptions;
 }
 
 function makeChoiceOptions(item: WordsConfigItem, prefix: string, maxCount: number): QuestionOption[] {
@@ -176,9 +198,7 @@ function makeOrderingQuestion(item: WordsConfigItem): QuestionBankItem | null {
     }
 
     const correctOptions = parts.map((text, index) => makeOption(`order_${item.id}_${index + 1}`, text));
-    const displayOptions = correctOptions.length > 1
-        ? correctOptions.slice().reverse()
-        : correctOptions.slice();
+    const displayOptions = makeShuffledOrderingOptions(correctOptions);
     const ordering: OrderingQuestionData = {
         prompt: toText(item.prompt),
         options: displayOptions,

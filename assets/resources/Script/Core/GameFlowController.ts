@@ -3,7 +3,7 @@ import { GamePhase, QuestionItem, QuestionMode, PrepareTaskKey, QuestionType } f
 import GameRuntime from "./GameRuntime";
 import TimeController from "./TimeController";
 import { SkillType } from "../Entity/EntityTypes";
-import PrepareController, { PrepareAnswerResult } from "../Prepare/PrepareController";
+import PrepareController, { PrepareAnswerResult, PrepareUpgradeStep } from "../Prepare/PrepareController";
 import QuestionController from "../Prepare/QuestionController";
 import BattleController from "../Battle/BattleController";
 import { BattleViewData } from "../UI/BattleView";
@@ -14,6 +14,7 @@ import { AudioID } from "../global/TD_Constants";
 
 export default class GameFlowController {
     private static readonly FAIL_RESULT_DELAY = 1;
+    private static readonly MULTI_TASK_UPGRADE_INTERVAL = 0.5;
 
     private readonly runtime: GameRuntime;
     private readonly timeController = new TimeController();
@@ -174,25 +175,40 @@ export default class GameFlowController {
             return;
         }
 
+        const battleQuestion = this.currentBattleQuestion;
         const isCorrect = DebugConfig.demoAlwaysCorrect
-            || this.isBattleAnswerCorrect(this.currentBattleQuestion, optionIndex, detail);
+            || this.isBattleAnswerCorrect(battleQuestion, optionIndex, detail);
+        const resumePhase = this.runtime.context.lastBattlePhaseBeforeQuestionPause;
         this.runtime.context.totalAnswered += 1;
         this.battleQuestionIndexInRound += 1;
         if (isCorrect) {
             this.runtime.context.totalCorrect += 1;
+        } else {
+            this.runtime.context.recordPrepareWrongQuestion(battleQuestion.id, this.runtime.context.currentRound);
         }
 
         const skillType = this.pendingSkillType;
         this.currentBattleQuestion = null;
         this.pendingSkillType = null;
         this.pendingSkillCost = 0;
-        this.changePhase(this.runtime.context.lastBattlePhaseBeforeQuestionPause);
-        this.battleController.resumeBattleVisualState();
+        const finishBattleQuestion = (): void => {
+            this.changePhase(resumePhase);
+            this.battleController.resumeBattleVisualState();
 
-        if (isCorrect && skillType) {
-            this.battleController.tryUseSkillAfterQuestion(skillType);
+            if (isCorrect && skillType) {
+                this.battleController.tryUseSkillAfterQuestion(skillType);
+            }
             this.refreshBattleAndResultUi();
+        };
+
+        if (!isCorrect) {
+            this.uiManager.closeQuestionTo(this.uiManager.getCodeAnchor(), () => {
+                finishBattleQuestion();
+            });
+            return;
         }
+
+        finishBattleQuestion();
     }
 
     private onQuestionOption(index: number, detail?: any): void {
@@ -227,21 +243,75 @@ export default class GameFlowController {
                 this.uiManager.playCodeGain();
             }
 
-            const visibleTaskKey = result.upgradeGranted && result.taskCompleted
-                ? result.sourceTaskKey
-                : this.prepareController.getCurrentTaskKey();
-            this.refreshPrepareUi(visibleTaskKey);
+            this.applyPrepareAnswerResult(result, currentToken);
+        });
+    }
 
-            if (!result.hasRemainingQuestion) {
-                this.prepareFlowLocked = false;
-                this.refreshPrepareUi();
-                this.uiManager.hideQuestion();
+    private applyPrepareAnswerResult(result: PrepareAnswerResult, token: number): void {
+        if (token !== this.prepareFlowToken || this.runtime.context.phase !== GamePhase.Prepare) {
+            return;
+        }
+
+        const steps = result.upgradeSteps || [];
+        if (steps.length > 0) {
+            this.applyPrepareUpgradeStepsSequentially(steps, token, () => {
+                if (token !== this.prepareFlowToken || this.runtime.context.phase !== GamePhase.Prepare) {
+                    return;
+                }
+
+                this.prepareController.refreshQuestionAfterUpgradeSequence();
+                this.finishPrepareAnswerFlow(result, steps.length > 1);
+            });
+            return;
+        }
+
+        this.finishPrepareAnswerFlow(result, false);
+    }
+
+    private applyPrepareUpgradeStepsSequentially(
+        steps: PrepareUpgradeStep[],
+        token: number,
+        onComplete: () => void,
+    ): void {
+        const applyAtIndex = (index: number): void => {
+            if (token !== this.prepareFlowToken || this.runtime.context.phase !== GamePhase.Prepare) {
                 return;
             }
 
-            const reopenDelay = result.upgradeGranted && result.taskCompleted ? 0.3 : 0.1;
-            this.queuePrepareQuestion(reopenDelay);
-        });
+            const step = steps[index];
+            this.prepareController.applyUpgradeStep(step);
+            this.refreshPrepareUi(step.key);
+
+            if (index >= steps.length - 1) {
+                onComplete();
+                return;
+            }
+
+            this.uiManager.delay(GameFlowController.MULTI_TASK_UPGRADE_INTERVAL, () => {
+                applyAtIndex(index + 1);
+            });
+        };
+
+        applyAtIndex(0);
+    }
+
+    private finishPrepareAnswerFlow(result: PrepareAnswerResult, usedUpgradeSequence: boolean): void {
+        const visibleTaskKey = result.upgradeGranted && result.taskCompleted && !usedUpgradeSequence
+            ? result.sourceTaskKey
+            : this.prepareController.getCurrentTaskKey();
+        this.refreshPrepareUi(visibleTaskKey);
+
+        if (!this.prepareController.hasRemainingQuestion()) {
+            this.prepareFlowLocked = false;
+            this.refreshPrepareUi();
+            this.uiManager.hideQuestion();
+            return;
+        }
+
+        const reopenDelay = usedUpgradeSequence
+            ? 0.1
+            : (result.upgradeGranted && result.taskCompleted ? 0.3 : 0.1);
+        this.queuePrepareQuestion(reopenDelay);
     }
 
     private queuePrepareQuestion(delaySeconds: number): void {
@@ -563,7 +633,7 @@ export default class GameFlowController {
     }
 
     private getNextPrepareQuestionViewIndex(): number {
-        const availableViewIndices = [2, 0, 4, 2, 3, 5];
+        const availableViewIndices = [0, 4, 2, 3, 5];
         const totalTypeCount = Math.max(1, availableViewIndices.length);
         const roundIndex = ((Math.max(1, this.runtime.context.currentRound) - 1) % totalTypeCount + totalTypeCount) % totalTypeCount;
         const targetViewIndex = availableViewIndices[roundIndex];

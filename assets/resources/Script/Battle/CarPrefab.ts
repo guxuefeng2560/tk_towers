@@ -5,6 +5,7 @@ export default class CarPrefab extends cc.Component {
     private static readonly SAW_SHOW_ANIM_DURATION = 0.15;
     private static readonly SAW_HIT_SHAKE_AMPLITUDE = 3;
     private static readonly SAW_HIT_SHAKE_REPEAT = 2;
+    private static readonly SAW_HIT_FEEDBACK_PLAYING_KEY = "__sawHitFeedbackPlaying";
 
     @property(cc.Node)
     bodyNode: cc.Node = null;
@@ -60,6 +61,7 @@ export default class CarPrefab extends cc.Component {
         const previousVisible = !!(this.sawNode as any)[stateKey];
         if (previousVisible === visible) {
             if (!visible) {
+                this.resetSawHitFeedbackState();
                 this.sawNode.active = false;
                 this.sawNode.scaleX = 1;
                 this.sawNode.angle = 0;
@@ -68,6 +70,7 @@ export default class CarPrefab extends cc.Component {
         }
         (this.sawNode as any)[stateKey] = visible;
         this.sawNode.stopAllActions();
+        this.resetSawHitFeedbackState();
 
         if (!visible) {
             this.sawNode.active = false;
@@ -97,7 +100,7 @@ export default class CarPrefab extends cc.Component {
         }
 
         const sawNode = this.sawNode;
-        const playingKey = "__sawHitFeedbackPlaying";
+        const playingKey = CarPrefab.SAW_HIT_FEEDBACK_PLAYING_KEY;
         if ((sawNode as any)[playingKey]) {
             return;
         }
@@ -157,5 +160,11 @@ export default class CarPrefab extends cc.Component {
     private getBodySprite(): cc.Sprite | null {
         const bodyNode = this.resolveBodyNode();
         return bodyNode ? bodyNode.getComponent(cc.Sprite) : null;
+    }
+
+    private resetSawHitFeedbackState(): void {
+        if (this.sawNode) {
+            (this.sawNode as any)[CarPrefab.SAW_HIT_FEEDBACK_PLAYING_KEY] = false;
+        }
     }
 }

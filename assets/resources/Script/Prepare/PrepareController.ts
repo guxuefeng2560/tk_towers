@@ -11,12 +11,19 @@ interface PrepareTaskConfig {
     upgradeType: UpgradeType;
 }
 
+export interface PrepareUpgradeStep {
+    key: PrepareTaskKey;
+    upgradeType: UpgradeType;
+    taskCompleted: boolean;
+}
+
 export interface PrepareAnswerResult {
     isCorrect: boolean;
     upgradeGranted: boolean;
     sourceTaskKey: PrepareTaskKey | null;
     taskCompleted: boolean;
     hasRemainingQuestion: boolean;
+    upgradeSteps: PrepareUpgradeStep[];
 }
 
 export interface QuestionAnswerDetail {
@@ -141,6 +148,7 @@ export default class PrepareController {
                 sourceTaskKey: null,
                 taskCompleted: false,
                 hasRemainingQuestion: !!this.currentPrepareQuestion,
+                upgradeSteps: [],
             };
         }
 
@@ -153,23 +161,29 @@ export default class PrepareController {
         const isCorrect = DebugConfig.demoAlwaysCorrect
             || GameConfig.prepare.demoAlwaysCorrect
             || this.isAnswerCorrect(this.currentPrepareQuestion, optionIndex);
-        const upgradeGranted = isCorrect;
+        const upgradeSteps = isCorrect
+            ? [{
+                key: sourceTaskKey,
+                upgradeType: currentTask.upgradeType,
+                taskCompleted: sourceProgress + 1 >= currentTask.requiredCount,
+            }]
+            : [];
+        const upgradeGranted = upgradeSteps.length > 0;
 
         this.context.recordPrepareAnswer(isCorrect);
         this.context.resolvePrepareQuestion(this.currentPrepareQuestion.id, isCorrect);
 
-        if (upgradeGranted) {
-            this.upgradeController.applyUpgrade(this.context, currentTask.upgradeType);
+        if (!upgradeGranted) {
+            this.refreshCurrentQuestion();
         }
-
-        this.refreshCurrentQuestion();
 
         return {
             isCorrect,
             upgradeGranted,
             sourceTaskKey,
-            taskCompleted: upgradeGranted && sourceProgress + 1 >= currentTask.requiredCount,
-            hasRemainingQuestion: !!this.currentPrepareQuestion,
+            taskCompleted: upgradeGranted && upgradeSteps[0].taskCompleted,
+            hasRemainingQuestion: upgradeGranted ? true : !!this.currentPrepareQuestion,
+            upgradeSteps,
         };
     }
 
@@ -182,6 +196,7 @@ export default class PrepareController {
                 sourceTaskKey: null,
                 taskCompleted: false,
                 hasRemainingQuestion: false,
+                upgradeSteps: [],
             };
         }
 
@@ -189,32 +204,26 @@ export default class PrepareController {
         const totalCount = Math.max(0, Math.floor(detail && detail.matchingTotalCount !== undefined ? detail.matchingTotalCount : 0));
         const maxHistoryCount = this.context.getQuestionMaxCorrectCount(question.questionType, question.id);
         const isImproved = nowCount > maxHistoryCount;
-        let grantResult = {
-            appliedCount: 0,
-            sourceTaskKey: null as PrepareTaskKey | null,
-            taskCompleted: false,
-        };
+        const upgradeSteps = isImproved ? this.planPrepareUpgrades(nowCount - maxHistoryCount) : [];
 
         this.context.recordPrepareAnswer(isImproved);
 
         if (isImproved) {
-            const diff = nowCount - maxHistoryCount;
             this.context.updateQuestionMaxCorrectCount(question.questionType, question.id, nowCount);
             this.context.clearPrepareWrongQuestion(question.id);
-            grantResult = this.applyPrepareUpgrades(diff);
             this.context.resolvePrepareQuestion(question.id, totalCount > 0 && nowCount >= totalCount);
         } else {
             this.context.recordPrepareWrongQuestion(question.id);
+            this.refreshCurrentQuestion();
         }
-
-        this.refreshCurrentQuestion();
 
         return {
             isCorrect: isImproved,
-            upgradeGranted: grantResult.appliedCount > 0,
-            sourceTaskKey: grantResult.sourceTaskKey,
-            taskCompleted: grantResult.taskCompleted,
-            hasRemainingQuestion: !!this.currentPrepareQuestion,
+            upgradeGranted: upgradeSteps.length > 0,
+            sourceTaskKey: upgradeSteps.length > 0 ? upgradeSteps[0].key : null,
+            taskCompleted: upgradeSteps.length > 0 ? upgradeSteps[0].taskCompleted : false,
+            hasRemainingQuestion: upgradeSteps.length > 0 ? true : !!this.currentPrepareQuestion,
+            upgradeSteps,
         };
     }
 
@@ -257,33 +266,41 @@ export default class PrepareController {
         return this.context.getCurrentRoundTaskProgress(taskKey);
     }
 
-    private applyPrepareUpgrades(count: number): { appliedCount: number; sourceTaskKey: PrepareTaskKey | null; taskCompleted: boolean } {
+    public applyUpgradeStep(step: PrepareUpgradeStep): void {
+        this.upgradeController.applyUpgrade(this.context, step.upgradeType);
+    }
+
+    public refreshQuestionAfterUpgradeSequence(): void {
+        this.refreshCurrentQuestion();
+    }
+
+    public hasRemainingQuestion(): boolean {
+        return !!this.currentPrepareQuestion;
+    }
+
+    private planPrepareUpgrades(count: number): PrepareUpgradeStep[] {
+        const simulatedProgress = this.createSimulatedTaskProgress();
+        const steps: PrepareUpgradeStep[] = [];
         let remainingCount = Math.max(0, Math.floor(count));
-        let appliedCount = 0;
-        let sourceTaskKey: PrepareTaskKey | null = null;
-        let taskCompleted = false;
 
         while (remainingCount > 0) {
-            const task = this.getCurrentTask();
+            const task = this.getCurrentTaskByProgress(simulatedProgress);
             if (!task) {
                 break;
             }
 
-            const progressBefore = this.getTaskProgress(task.key);
-            if (!sourceTaskKey) {
-                sourceTaskKey = task.key;
-            }
-
-            this.upgradeController.applyUpgrade(this.context, task.upgradeType);
-            appliedCount += 1;
+            const progressBefore = simulatedProgress[task.key] || 0;
+            const progressAfter = progressBefore + 1;
+            simulatedProgress[task.key] = progressAfter;
+            steps.push({
+                key: task.key,
+                upgradeType: task.upgradeType,
+                taskCompleted: progressAfter >= task.requiredCount,
+            });
             remainingCount -= 1;
-
-            if (progressBefore + 1 >= task.requiredCount) {
-                taskCompleted = true;
-            }
         }
 
-        return { appliedCount, sourceTaskKey, taskCompleted };
+        return steps;
     }
 
     private refreshCurrentQuestion(): void {
@@ -332,6 +349,27 @@ export default class PrepareController {
         }
 
         return BASE_PREPARE_TASKS.filter((task) => task.key !== PrepareTaskKey.Hurt);
+    }
+
+    private getCurrentTaskByProgress(progressByTask: Record<PrepareTaskKey, number>): PrepareTaskConfig | null {
+        const tasks = this.getPrepareTasks();
+        for (const task of tasks) {
+            const progress = Math.min(progressByTask[task.key] || 0, task.requiredCount);
+            if (progress < task.requiredCount) {
+                return task;
+            }
+        }
+        return null;
+    }
+
+    private createSimulatedTaskProgress(): Record<PrepareTaskKey, number> {
+        return {
+            [PrepareTaskKey.BuyCar]: this.getTaskProgress(PrepareTaskKey.BuyCar),
+            [PrepareTaskKey.UnlockSkill]: this.getTaskProgress(PrepareTaskKey.UnlockSkill),
+            [PrepareTaskKey.Hurt]: this.getTaskProgress(PrepareTaskKey.Hurt),
+            [PrepareTaskKey.Hp]: this.getTaskProgress(PrepareTaskKey.Hp),
+            [PrepareTaskKey.UnlockDef]: this.getTaskProgress(PrepareTaskKey.UnlockDef),
+        };
     }
 
     private syncPrepareTotalQuestionCount(): number {

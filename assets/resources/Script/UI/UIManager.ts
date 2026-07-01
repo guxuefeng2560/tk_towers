@@ -84,7 +84,7 @@ export default class UIManager {
         this.openQuestionView(viewIndex, null, data);
     }
 
-    public closePrepareQuestionTo(targetNode: cc.Node | null, onComplete: () => void): void {
+    public closeQuestionTo(targetNode: cc.Node | null, onComplete: () => void): void {
         this.pendingQuestionRequest = null;
         const activeView = this.getActiveQuestionView();
         if (!activeView) {
@@ -95,6 +95,10 @@ export default class UIManager {
             this.activeQuestionViewIndex = -1;
             onComplete();
         });
+    }
+
+    public closePrepareQuestionTo(targetNode: cc.Node | null, onComplete: () => void): void {
+        this.closeQuestionTo(targetNode, onComplete);
     }
 
     public hideQuestion(): void {

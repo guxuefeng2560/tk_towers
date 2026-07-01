@@ -206,10 +206,10 @@ export default class MonsterManager {
                 if (monster.attackTimer >= GameConfig.monster.attackInterval) {
                     monster.attackTimer = 0;
                     this.runtime.playMonsterAttack(monster.node);
-                    this.callbacks.onAttackCar(monster.attack, monster.node.y, monster.contactCarIndex);
+                    this.callbacks.onAttackCar(monster.attack, monsterRect.y + monsterRect.height*0.5, monster.contactCarIndex);
                 }
             } else if (monster.stackedOnMonsterId > 0) {
-                monster.attackTimer = 0;
+                // monster.attackTimer = 0;
             }
 
             this.updateMonsterKnockback(monster, dt);
@@ -266,7 +266,7 @@ export default class MonsterManager {
             return;
         }
 
-        AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_ide, 0.15);
+        // AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_ide, 0.15);
         monster.dying = true;
         monster.contactCar = false;
         monster.contactCarIndex = -1;
@@ -645,7 +645,7 @@ export default class MonsterManager {
     // ==================== 生成位置 ====================
 
     private getRightScreenMonsterSpawnX(): number {
-        return this.runtime.cameraTrackX + GameConfig.designWidth / 2 + randomRange(180, 420);
+        return this.runtime.cameraTrackX + GameConfig.designWidth / 2 + randomRange(180,190);
     }
 
     private getBossPhaseMonsterSpawnPosition(): cc.Vec2 {

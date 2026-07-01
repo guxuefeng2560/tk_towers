@@ -93,7 +93,7 @@
     "id": 11,
     "unit_id": 1,
     "question_type": 2,
-    "prompt": "大家{  }老师。",
+    "prompt": "大家{   }老师。",
     "option_1": "谢谢",
     "option_2": "再见",
     "correct_option": 1
@@ -102,7 +102,7 @@
     "id": 12,
     "unit_id": 1,
     "question_type": 2,
-    "prompt": "你{  }李文。",
+    "prompt": "你{   }李文。",
     "option_1": "高兴",
     "option_2": "认识",
     "correct_option": 2

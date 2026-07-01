@@ -219,7 +219,7 @@ export default class BulletManager {
 
             if (bullet.node.y <  GameConfig.monster.laneY -20) {
                 if (bullet.pendingCraterDelay === undefined) {
-                    bullet.pendingCraterDelay = randomRange(0.01, 0.05);
+                    bullet.pendingCraterDelay = randomRange(0, 0.02);
                 } else {
                     bullet.pendingCraterDelay -= dt;
                     if (bullet.pendingCraterDelay <= 0) {

@@ -7,6 +7,7 @@ import { AudioID } from "../global/TD_Constants";
 import { distance, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
+type IncomingAttackTarget = { type: "car"; carIndex: number } | { type: "hero" };
 
 /**
  * 车辆管理器回调接口
@@ -137,31 +138,30 @@ export default class CarManager {
     }
 
     /**
-     * 怪物攻击车辆侧：分配到合适车辆并扣血，车辆全毁后转为攻击英雄
+     * Select nearest incoming attack target among hero and alive cars.
      */
     public attackCarSide(baseDamage: number, attackerY?: number, preferredCarIndex: number = -1): void {
-        if (this.runtime.context.sawCarAlive) {
-            const targetCarIndex = preferredCarIndex >= 0 && this.runtime.context.getCarHp(preferredCarIndex) > 0
-                ? preferredCarIndex
-                : this.getCarIndexForIncomingAttack(attackerY);
-            const damage = this.getIncomingDamage(baseDamage, targetCarIndex);
-            const carPosition = this.runtime.getCarWorldPositionByIndex(targetCarIndex);
-            this.runtime.spawnFloatText(carPosition.x, carPosition.y + 45, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
-            AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
-            const damageResult = this.runtime.context.damageCar(targetCarIndex, damage);
-            this.runtime.playCarShieldHitEffect(targetCarIndex);
-            if (damageResult.destroyed) {
-                if (this.runtime.context.sawCarAlive) {
-                    this.runtime.spawnFloatText(carPosition.x, carPosition.y + 78, "\u5907\u7528\u6218\u8f66\u9876\u4e0a", new cc.Color(255, 220, 120, 255));
-                    return;
-                }
-
-                this.runtime.spawnFloatText(carPosition.x, carPosition.y + 40, "\u8f66\u8f86\u635f\u6bc1", new cc.Color(255, 96, 96, 255));
-            }
+        const target = this.getIncomingAttackTarget(attackerY, preferredCarIndex);
+        if (target.type === "hero") {
+            this.callbacks.onAttackHero(baseDamage);
             return;
         }
 
-        this.callbacks.onAttackHero(baseDamage);
+        const targetCarIndex = target.carIndex;
+        const damage = this.getIncomingDamage(baseDamage, targetCarIndex);
+        const carPosition = this.runtime.getCarWorldPositionByIndex(targetCarIndex);
+        this.runtime.spawnFloatText(carPosition.x, carPosition.y + 45, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
+        AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
+        const damageResult = this.runtime.context.damageCar(targetCarIndex, damage);
+        this.runtime.playCarShieldHitEffect(targetCarIndex);
+        if (damageResult.destroyed) {
+            if (this.runtime.context.sawCarAlive) {
+                this.runtime.spawnFloatText(carPosition.x, carPosition.y + 78, "\u5907\u7528\u6218\u8f66\u9876\u4e0a", new cc.Color(255, 220, 120, 255));
+                return;
+            }
+
+            this.runtime.spawnFloatText(carPosition.x, carPosition.y + 40, "\u8f66\u8f86\u635f\u6bc1", new cc.Color(255, 96, 96, 255));
+        }
     }
 
     /**
@@ -202,12 +202,49 @@ export default class CarManager {
         return targetIndex;
     }
 
+    private getIncomingAttackTarget(attackerY?: number, preferredCarIndex: number = -1): IncomingAttackTarget {
+        const aliveCarIndices = this.runtime.context.getAliveCarIndices();
+        const heroCanBeAttacked = this.runtime.context.playerHp > 0;
+
+        if (attackerY === undefined) {
+            if (preferredCarIndex >= 0 && this.runtime.context.getCarHp(preferredCarIndex) > 0) {
+                return { type: "car", carIndex: preferredCarIndex };
+            }
+            if (aliveCarIndices.length > 0) {
+                return { type: "car", carIndex: aliveCarIndices[aliveCarIndices.length - 1] };
+            }
+            return { type: "hero" };
+        }
+
+        let nearestTarget: IncomingAttackTarget | null = null;
+        let nearestDistance = Number.MAX_SAFE_INTEGER;
+
+        aliveCarIndices.forEach((index) => {
+            const carPosition = this.runtime.getCarWorldPositionByIndex(index);
+            const distanceToAttacker = Math.abs(carPosition.y - attackerY);
+            if (distanceToAttacker < nearestDistance) {
+                nearestDistance = distanceToAttacker;
+                nearestTarget = { type: "car", carIndex: index };
+            }
+        });
+
+        if (heroCanBeAttacked) {
+            const heroPosition = this.runtime.getHeroWorldPosition();
+            const distanceToHero = Math.abs(heroPosition.y - attackerY);
+            if (distanceToHero <= nearestDistance) {
+                nearestTarget = { type: "hero" };
+            }
+        }
+
+        return nearestTarget || { type: "hero" };
+    }
+
     /**
      * 车辆主体碰撞矩形（用于怪物接触判定）
      */
     public getCarRect(): Rect {
         const carNode = this.runtime.getCarVisualNode() || this.runtime.getCarAnchorNode();
-        return this.runtime.getNodeColliderRect(carNode, 180, 90);
+        return this.runtime.getNodeColliderRect(carNode, 130, 75);
     }
 
     /**
@@ -215,7 +252,7 @@ export default class CarManager {
      */
     public getCarRectByIndex(carIndex: number): Rect {
         const carNode = this.runtime.getCarVisualNodeByIndex(carIndex) || this.runtime.getCarVisualNode() || this.runtime.getCarAnchorNode();
-        return this.runtime.getNodeColliderRect(carNode, 180, 90);
+        return this.runtime.getNodeColliderRect(carNode, 130, 75);
     }
 
     /**
