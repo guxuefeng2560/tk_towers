@@ -19,14 +19,22 @@ export interface PrepareAnswerResult {
     hasRemainingQuestion: boolean;
 }
 
+export interface QuestionAnswerDetail {
+    matchingCorrectCount?: number;
+    matchingTotalCount?: number;
+}
+
 const BASE_PREPARE_TASKS: PrepareTaskConfig[] = [
     { key: PrepareTaskKey.BuyCar, requiredCount: 1, upgradeType: UpgradeType.UnlockSawCar },
     { key: PrepareTaskKey.UnlockSkill, requiredCount: 1, upgradeType: UpgradeType.UnlockSkill },
     { key: PrepareTaskKey.Hurt, requiredCount: 5, upgradeType: UpgradeType.Attack },
     { key: PrepareTaskKey.Hp, requiredCount: 3, upgradeType: UpgradeType.Hp },
     { key: PrepareTaskKey.UnlockDef, requiredCount: 1, upgradeType: UpgradeType.UnlockDefense },
-    { key: PrepareTaskKey.Energy, requiredCount: 5, upgradeType: UpgradeType.EnergyRegen },
+    // { key: PrepareTaskKey.Energy, requiredCount: 5, upgradeType: UpgradeType.EnergyRegen },
 ];
+const HURT_REQUIRED_COUNT = 5;
+const MATCHING_SKIP_HURT_QUESTION_COUNT = 2;
+const OTHER_SKIP_HURT_QUESTION_COUNT = 6;
 
 export default class PrepareController {
     private readonly context: GameContext;
@@ -53,13 +61,16 @@ export default class PrepareController {
     public prepareCurrentRoundQuestions(): void {
         this.context.ensurePrepareRoundState();
         this.context.resetCurrentPrepareSession();
+        const targetQuestionCount = this.syncPrepareTotalQuestionCount();
         const initialQuestionIds = this.questionController.createPrepareQuestionIds(
-            GameConfig.prepare.totalQuestionCount,
+            targetQuestionCount,
             this.context.currentRound,
+            this.getCurrentUnitId(),
         );
         const sessionQuestionIds = this.context.beginPrepareRoundQuestionSession(initialQuestionIds, this.context.currentRound);
+        this.applySkippedPrepareTaskDefaults();
         this.prepareQuestionTargetCount = sessionQuestionIds.length;
-        this.questionController.rebuildPrepareQuestionsByIds(sessionQuestionIds, this.context.currentRound);
+        this.questionController.rebuildPrepareQuestionsByIds(sessionQuestionIds, this.context.currentRound, this.getCurrentUnitId());
         this.refreshCurrentQuestion();
     }
 
@@ -121,7 +132,7 @@ export default class PrepareController {
         };
     }
 
-    public answerQuestion(optionIndex: number): PrepareAnswerResult {
+    public answerQuestion(optionIndex: number, detail?: QuestionAnswerDetail): PrepareAnswerResult {
         const currentTask = this.getCurrentTask();
         if (!currentTask || !this.currentPrepareQuestion) {
             return {
@@ -131,6 +142,10 @@ export default class PrepareController {
                 taskCompleted: false,
                 hasRemainingQuestion: !!this.currentPrepareQuestion,
             };
+        }
+
+        if (this.currentPrepareQuestion.questionType === QuestionType.Matching) {
+            return this.answerMatchingQuestion(detail);
         }
 
         const sourceTaskKey = currentTask.key;
@@ -154,6 +169,51 @@ export default class PrepareController {
             upgradeGranted,
             sourceTaskKey,
             taskCompleted: upgradeGranted && sourceProgress + 1 >= currentTask.requiredCount,
+            hasRemainingQuestion: !!this.currentPrepareQuestion,
+        };
+    }
+
+    private answerMatchingQuestion(detail?: QuestionAnswerDetail): PrepareAnswerResult {
+        const question = this.currentPrepareQuestion;
+        if (!question) {
+            return {
+                isCorrect: false,
+                upgradeGranted: false,
+                sourceTaskKey: null,
+                taskCompleted: false,
+                hasRemainingQuestion: false,
+            };
+        }
+
+        const nowCount = Math.max(0, Math.floor(detail && detail.matchingCorrectCount !== undefined ? detail.matchingCorrectCount : 0));
+        const totalCount = Math.max(0, Math.floor(detail && detail.matchingTotalCount !== undefined ? detail.matchingTotalCount : 0));
+        const maxHistoryCount = this.context.getQuestionMaxCorrectCount(question.questionType, question.id);
+        const isImproved = nowCount > maxHistoryCount;
+        let grantResult = {
+            appliedCount: 0,
+            sourceTaskKey: null as PrepareTaskKey | null,
+            taskCompleted: false,
+        };
+
+        this.context.recordPrepareAnswer(isImproved);
+
+        if (isImproved) {
+            const diff = nowCount - maxHistoryCount;
+            this.context.updateQuestionMaxCorrectCount(question.questionType, question.id, nowCount);
+            this.context.clearPrepareWrongQuestion(question.id);
+            grantResult = this.applyPrepareUpgrades(diff);
+            this.context.resolvePrepareQuestion(question.id, totalCount > 0 && nowCount >= totalCount);
+        } else {
+            this.context.recordPrepareWrongQuestion(question.id);
+        }
+
+        this.refreshCurrentQuestion();
+
+        return {
+            isCorrect: isImproved,
+            upgradeGranted: grantResult.appliedCount > 0,
+            sourceTaskKey: grantResult.sourceTaskKey,
+            taskCompleted: grantResult.taskCompleted,
             hasRemainingQuestion: !!this.currentPrepareQuestion,
         };
     }
@@ -197,6 +257,35 @@ export default class PrepareController {
         return this.context.getCurrentRoundTaskProgress(taskKey);
     }
 
+    private applyPrepareUpgrades(count: number): { appliedCount: number; sourceTaskKey: PrepareTaskKey | null; taskCompleted: boolean } {
+        let remainingCount = Math.max(0, Math.floor(count));
+        let appliedCount = 0;
+        let sourceTaskKey: PrepareTaskKey | null = null;
+        let taskCompleted = false;
+
+        while (remainingCount > 0) {
+            const task = this.getCurrentTask();
+            if (!task) {
+                break;
+            }
+
+            const progressBefore = this.getTaskProgress(task.key);
+            if (!sourceTaskKey) {
+                sourceTaskKey = task.key;
+            }
+
+            this.upgradeController.applyUpgrade(this.context, task.upgradeType);
+            appliedCount += 1;
+            remainingCount -= 1;
+
+            if (progressBefore + 1 >= task.requiredCount) {
+                taskCompleted = true;
+            }
+        }
+
+        return { appliedCount, sourceTaskKey, taskCompleted };
+    }
+
     private refreshCurrentQuestion(): void {
         const totalCount = this.prepareQuestionTargetCount;
         if (totalCount <= 0 || this.context.prepareAnsweredCount >= totalCount) {
@@ -238,6 +327,44 @@ export default class PrepareController {
     }
 
     private getPrepareTasks(): PrepareTaskConfig[] {
-        return BASE_PREPARE_TASKS.slice();
+        if (!this.shouldSkipHurtTask()) {
+            return BASE_PREPARE_TASKS.slice();
+        }
+
+        return BASE_PREPARE_TASKS.filter((task) => task.key !== PrepareTaskKey.Hurt);
+    }
+
+    private syncPrepareTotalQuestionCount(): number {
+        const targetQuestionCount = this.getCurrentRoundQuestionCount();
+        GameConfig.prepare.totalQuestionCount = targetQuestionCount;
+        return targetQuestionCount;
+    }
+
+    private getCurrentRoundQuestionCount(): number {
+        return this.questionController.getRoundQuestionSetInfo(
+            this.context.currentRound,
+            this.getCurrentUnitId(),
+        ).questionCount;
+    }
+
+    private applySkippedPrepareTaskDefaults(): void {
+        if (this.shouldSkipHurtTask()) {
+            this.context.completeCurrentRoundPrepareTask(PrepareTaskKey.Hurt, HURT_REQUIRED_COUNT);
+        }
+    }
+
+    private shouldSkipHurtTask(): boolean {
+        const info = this.questionController.getRoundQuestionSetInfo(
+            this.context.currentRound,
+            this.getCurrentUnitId(),
+        );
+        if (info.questionType === QuestionType.Matching) {
+            return info.questionCount <= MATCHING_SKIP_HURT_QUESTION_COUNT;
+        }
+        return info.questionCount <= OTHER_SKIP_HURT_QUESTION_COUNT;
+    }
+
+    private getCurrentUnitId(): number {
+        return this.context.currentUnitId;
     }
 }

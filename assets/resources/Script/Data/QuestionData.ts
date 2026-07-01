@@ -1,652 +1,283 @@
-﻿import {
+import {
     CheckRightQuestionData,
     FillBlankChoiceQuestionData,
-    ImageChoiceQuestionData,
     MatchingQuestionData,
     OrderingQuestionData,
     QuestionItem,
     QuestionMode,
+    QuestionOption,
     QuestionType,
     SplitSentenceChoiceQuestionData,
 } from "../Core/GameDefines";
+import WordsConfig, { WordsConfigItem } from "./WordsConfig";
 
-interface QuestionBankItem {
-    title: string;
-    aleart: string;
-    ques: string;
-    answer1: string;
-    answer2: string;
-    answer3?: string;
-    answer4?: string;
-    correctAnswerIndex?: number;
-    questionType: QuestionType;
-    fillBlankChoice?: FillBlankChoiceQuestionData;
-    imageChoice?: ImageChoiceQuestionData;
-    matching?: MatchingQuestionData;
-    ordering?: OrderingQuestionData;
-    splitSentenceChoice?: SplitSentenceChoiceQuestionData;
-    checkRight?: CheckRightQuestionData;
+type QuestionBankItem = Omit<QuestionItem, "id">;
+
+const QUESTION_SET_COUNT = 6;
+const ROUND_TO_QUESTION_SET_INDEX = [2, 0, 4, 2, 3, 5];
+const DEFAULT_UNIT_ID = 1;
+
+function toText(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) {
+        return "";
+    }
+    return `${value}`;
 }
 
-/**
- * 题型 1：选择填空题集。
- * 后续新增同类题目时，直接追加到该数组中，战斗中会在本题集内循环取题。
- */
-const TEST_FILL_BLANK_CHOICE_QUESTIONS: QuestionBankItem[] = [
-    // {
-    //     title: "题型1 选择填空",
-    //     aleart: "选择正确的搭配",
-    //     ques: "妈妈叫我____。",
-    //     answer1: "回家吃饭",
-    //     answer2: "吃饭回家",
-    //     correctAnswerIndex: 0,
-    //     questionType: QuestionType.FillBlankChoice,
-    //     fillBlankChoice: {
-    //         prompt: "妈妈叫我_____。",
-    //         options: [
-    //             { id: "fill_1_a", text: "回家吃饭" },
-    //             { id: "fill_1_b", text: "吃饭回家" },
-    //         ],
-    //         correctOptionId: "fill_1_a",
-    //     },
-    // },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "妈妈(  )我去玩。",
-        answer1: "不让",
-        answer2: "让不",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "妈妈(  )我去玩。",
-            options: [
-                { id: "fill_1_a", text: "不让" },
-                { id: "fill_1_b", text: "让不" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "我(  )来我家里吃饭。",
-        answer1: "请朋友们",
-        answer2: "朋友们请",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "我(  )来我家里吃饭。",
-            options: [
-                { id: "fill_1_a", text: "请朋友们" },
-                { id: "fill_1_b", text: "朋友们请" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "医生(  )他喝冷水。",
-        answer1: "不让",
-        answer2: "让不",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "医生(  )他喝冷水。",
-            options: [
-                { id: "fill_1_a", text: "不让" },
-                { id: "fill_1_b", text: "让不" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "他生病了，妈妈(  )早点儿休息。",
-        answer1: "让他",
-        answer2: "他让",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "他生病了，妈妈(  )早点儿休息。",
-            options: [
-                { id: "fill_1_a", text: "让他" },
-                { id: "fill_1_b", text: "他让" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "爸爸工作太忙，他(  )去学校接妹妹。",
-        answer1: "叫我",
-        answer2: "我叫",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "爸爸工作太忙，他(  )去学校接妹妹。",
-            options: [
-                { id: "fill_1_a", text: "叫我" },
-                { id: "fill_1_b", text: "我叫" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-    {
-        title: "题型1 选择填空",
-        aleart: "选择正确的搭配",
-        ques: "姐姐工作太忙了，今天她(  )大家看电影。",
-        answer1: "没请",
-        answer2: "请没",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.FillBlankChoice,
-        fillBlankChoice: {
-            prompt: "姐姐工作太忙了，今天她(  )大家看电影。",
-            options: [
-                { id: "fill_1_a", text: "没请" },
-                { id: "fill_1_b", text: "请没" },
-            ],
-            correctOptionId: "fill_1_a",
-        },
-    },
-];
+function hasText(value: string | null | undefined): boolean {
+    return toText(value).length > 0;
+}
 
-/**
- * 题型 2：看图选择题集。
- * 战斗轮次命中该题集时，只会从该数组中按顺序轮询题目。
- */
-const TEST_IMAGE_CHOICE_QUESTIONS: QuestionBankItem[] = [
-    {
-        title: "题型2 看图选择",
-        aleart: "选择图片表达的内容",
-        ques: "选择图片表达的内容",
-        answer1: "妈妈叫我回家吃饭",
-        answer2: "妈妈让我去接弟弟",
-        answer3: "妈妈让弟弟去学校",
-        correctAnswerIndex: 1,
-        questionType: QuestionType.ImageChoice,
-        imageChoice: {
-            imagePath: "resources/images/temp_bus",
-            prompt: "图片里妈妈在干什么？",
-            options: [
-                { id: "img_1_a", text: "妈妈叫我回家吃饭" },
-                { id: "img_1_b", text: "妈妈让我去接弟弟" },
-                { id: "img_1_c", text: "妈妈让弟弟去学校" },
-            ],
-            correctOptionId: "img_1_b",
-        },
-    },
-];
+function getCorrectIndex(rawCorrectOption: number | null, optionCount: number): number {
+    if (optionCount <= 0) {
+        return 0;
+    }
 
-/**
- * 题型 3：连线配对题集。
- */
-const TEST_MATCHING_QUESTIONS: QuestionBankItem[] = [
-    // {
-    //     title: "题型3 连线配对",
-    //     aleart: "左右两侧的语句进行正确的配对",
-    //     ques: "",
-    //     answer1: "",
-    //     answer2: "",
-    //     questionType: QuestionType.Matching,
-    //     matching: {
-    //         prompt: "左右两侧的语句进行正确的配对",
-    //         leftOptions: [
-    //             { id: "match_l_1", text: "老师叫你做什么？" },
-    //             { id: "match_l_2", text: "你请谁喝茶？" },
-    //             { id: "match_l_3", text: "妈妈让你吃什么？" },
-    //         ],
-    //         rightOptions: [
-    //             { id: "match_r_1", text: "妈妈让我吃米饭。" },
-    //             { id: "match_r_2", text: "老师叫我去学校。" },
-    //             { id: "match_r_3", text: "我请朋友喝茶。" },
-    //         ],
-    //         correctMatches: [
-    //             { leftId: "match_l_1", rightId: "match_r_2" },
-    //             { leftId: "match_l_2", rightId: "match_r_3" },
-    //             { leftId: "match_l_3", rightId: "match_r_1" },
-    //         ],
-    //     },
-    // },
-    {
-        title: "题型3 连线配对",
-        aleart: "左右两侧的语句进行正确的配对",
-        ques: "",
+    const rawIndex = Number(rawCorrectOption);
+    if (!isFinite(rawIndex)) {
+        return 0;
+    }
+
+    return Math.max(0, Math.min(optionCount - 1, Math.floor(rawIndex) - 1));
+}
+
+function makeOption(id: string, text: string): QuestionOption {
+    return { id, text };
+}
+
+function makeChoiceOptions(item: WordsConfigItem, prefix: string, maxCount: number): QuestionOption[] {
+    const optionSources = [item.option_1, item.option_2, item.option_3];
+    return optionSources
+        .slice(0, maxCount)
+        .filter((text): text is string => hasText(text))
+        .map((text, index) => makeOption(`${prefix}_${index + 1}`, text));
+}
+
+function makeCheckRightQuestion(item: WordsConfigItem): QuestionBankItem | null {
+    const options = makeChoiceOptions(item, `check_${item.id}`, 2);
+    if (options.length <= 0 || !hasText(item.prompt)) {
+        return null;
+    }
+
+    const correctAnswerIndex = getCorrectIndex(item.correct_option, options.length);
+    const checkRight: CheckRightQuestionData = {
+        prompt: toText(item.prompt),
+        options,
+        correctOptionId: options[correctAnswerIndex].id,
+    };
+
+    return {
+        questionType: QuestionType.CheckRight,
+        title: "",
+        aleart: "",
+        ques: checkRight.prompt,
+        answer1: options[0] ? options[0].text : "",
+        answer2: options[1] ? options[1].text : "",
+        correctAnswerIndex,
+        checkRight,
+    };
+}
+
+function makeTwoChoiceQuestion(item: WordsConfigItem): QuestionBankItem | null {
+    const options = makeChoiceOptions(item, `choice2_${item.id}`, 2);
+    if (options.length <= 0 || !hasText(item.prompt)) {
+        return null;
+    }
+
+    const correctAnswerIndex = getCorrectIndex(item.correct_option, options.length);
+    const fillBlankChoice: FillBlankChoiceQuestionData = {
+        prompt: toText(item.prompt),
+        options,
+        correctOptionId: options[correctAnswerIndex].id,
+    };
+
+    return {
+        questionType: QuestionType.FillBlankChoice,
+        title: "",
+        aleart: "",
+        ques: fillBlankChoice.prompt,
+        answer1: options[0] ? options[0].text : "",
+        answer2: options[1] ? options[1].text : "",
+        correctAnswerIndex,
+        fillBlankChoice,
+    };
+}
+
+function makeThreeChoiceQuestion(item: WordsConfigItem): QuestionBankItem | null {
+    const options = makeChoiceOptions(item, `choice3_${item.id}`, 3);
+    if (options.length <= 0 || !hasText(item.prompt)) {
+        return null;
+    }
+
+    const correctAnswerIndex = getCorrectIndex(item.correct_option, options.length);
+    const splitSentenceChoice: SplitSentenceChoiceQuestionData = {
+        sentence1: toText(item.prompt),
+        sentence2WithBlank: "",
+        options,
+        correctOptionId: options[correctAnswerIndex].id,
+    };
+
+    return {
+        questionType: QuestionType.SplitSentenceChoice,
+        title: "",
+        aleart: "",
+        ques: splitSentenceChoice.sentence1,
+        answer1: options[0] ? options[0].text : "",
+        answer2: options[1] ? options[1].text : "",
+        answer3: options[2] ? options[2].text : "",
+        correctAnswerIndex,
+        splitSentenceChoice,
+    };
+}
+
+function makeMatchingQuestion(item: WordsConfigItem): QuestionBankItem | null {
+    const leftSources = [item.match_left_1, item.match_left_2, item.match_left_3];
+    const rightSources = [item.match_right_1, item.match_right_2, item.match_right_3];
+    const leftOptions = leftSources
+        .filter((text): text is string => hasText(text))
+        .map((text, index) => ({ id: `match_${item.id}_l_${index + 1}`, text }));
+    const rightOptions = rightSources
+        .filter((text): text is string => hasText(text))
+        .map((text, index) => ({ id: `match_${item.id}_r_${index + 1}`, text }));
+    const pairCount = Math.min(leftOptions.length, rightOptions.length);
+    if (pairCount <= 0) {
+        return null;
+    }
+
+    const matching: MatchingQuestionData = {
+        prompt: toText(item.prompt),
+        leftOptions,
+        rightOptions,
+        correctMatches: leftOptions.slice(0, pairCount).map((leftOption, index) => ({
+            leftId: leftOption.id,
+            rightId: rightOptions[index].id,
+        })),
+    };
+
+    return {
+        questionType: QuestionType.Matching,
+        title: "",
+        aleart: matching.prompt,
+        ques: matching.prompt,
         answer1: "",
         answer2: "",
-        questionType: QuestionType.Matching,
-        matching: {
-            prompt: "左右两侧的语句进行正确的配对",
-            leftOptions: [
-                { id: "match_l_1", text: "谁让你去超市买东西？" },
-                { id: "match_l_2", text: "老师想和大家说什么？" },
-                { id: "match_l_3", text: "谁来给妹妹看病？" },
-            ],
-            rightOptions: [
-                { id: "match_r_1", text: "爸爸请医生来家里。" },
-                { id: "match_r_2", text: "妈妈让我在超市买东西。" },
-                { id: "match_r_3", text: "老师请大家不要说话。" },
-            ],
-            correctMatches: [
-                { leftId: "match_l_1", rightId: "match_r_2" },
-                { leftId: "match_l_2", rightId: "match_r_3" },
-                { leftId: "match_l_3", rightId: "match_r_1" },
-            ],
-        },
-    },
-    {
-        title: "题型3 连线配对",
-        aleart: "左右两侧的语句进行正确的配对",
-        ques: "",
-        answer1: "",
-        answer2: "",
-        questionType: QuestionType.Matching,
-        matching: {
-            prompt: "左右两侧的语句进行正确的配对",
-            leftOptions: [
-                { id: "match_l_1", text: "你去哪里接他？" },
-                { id: "match_l_2", text: "你为什么不吃冷的？" },
-                { id: "match_l_3", text: "谁请你看电影？" },
-            ],
-            rightOptions: [
-                { id: "match_r_1", text: "医生不让我吃冷的东西。" },
-                { id: "match_r_2", text: "姐姐请我看电影。" },
-                { id: "match_r_3", text: "爸爸叫我去学校接他。" },
-            ],
-            correctMatches: [
-                { leftId: "match_l_1", rightId: "match_r_3" },
-                { leftId: "match_l_2", rightId: "match_r_1" },
-                { leftId: "match_l_3", rightId: "match_r_2" },
-            ],
-        },
-    },
-];
-
-/**
- * 题型 4：排序题集。
- */
-const TEST_ORDERING_QUESTIONS: QuestionBankItem[] = [
-    // {
-    //     title: "题型4 排序",
-    //     aleart: "将打乱的字词正确排列成句子",
-    //     ques: "",
-    //     answer1: "妈妈",
-    //     answer2: "叫我",
-    //     answer3: "接弟弟",
-    //     answer4: "回家",
-    //     questionType: QuestionType.Ordering,
-    //     ordering: {
-    //         prompt: "请把词语按正确顺序排列成句子。",
-    //         options: [
-    //             { id: "order_1", text: "妈妈" },
-    //             { id: "order_2", text: "叫我" },
-    //             { id: "order_3", text: "接弟弟" },
-    //             { id: "order_4", text: "回家" },
-    //         ],
-    //         correctOrder: ["order_1", "order_2", "order_3", "order_4"],
-    //     },
-    // },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "医生",
-        answer2: "让我",
-        answer3: "吃",
-        answer4: "药。",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "让我" },
-                { id: "order_2", text: "吃" },
-                { id: "order_3", text: "医生" },
-                { id: "order_4", text: "药。" },
-            ],
-            correctOrder: ["order_3", "order_1", "order_2", "order_4"],
-        },
-    },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "医生",
-        answer2: "不",
-        answer3: "让你",
-        answer4: "吃",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "面条儿。" },
-                { id: "order_2", text: "不" },
-                { id: "order_3", text: "吃" },
-                { id: "order_4", text: "医生" },
-                { id: "order_5", text: "让你" },
-            ],
-            correctOrder: ["order_4", "order_2", "order_5", "order_3", "order_1"],
-        },
-    },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "老师",
-        answer2: "叫我",
-        answer3: "去",
-        answer4: "学校",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "叫我" },
-                { id: "order_2", text: "去" },
-                { id: "order_3", text: "学校" },
-                { id: "order_4", text: "老师" },
-                { id: "order_5", text: "看书。" },
-            ],
-            correctOrder: ["order_4", "order_1", "order_2", "order_3", "order_5"],
-        },
-    },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "爸爸",
-        answer2: "不",
-        answer3: "让我",
-        answer4: "去",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "去" },
-                { id: "order_2", text: "爸爸" },
-                { id: "order_3", text: "接他。" },
-                { id: "order_4", text: "不" },
-                { id: "order_5", text: "让我" },
-            ],
-            correctOrder: ["order_2", "order_4", "order_5", "order_1", "order_3"],
-        },
-    },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "我",
-        answer2: "请朋友们",
-        answer3: "来",
-        answer4: "家里",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "请朋友们" },
-                { id: "order_2", text: "吃" },
-                { id: "order_3", text: "面条儿。" },
-                { id: "order_4", text: "我" },
-                { id: "order_5", text: "来" },
-                { id: "order_6", text: "家里" },
-            ],
-            correctOrder: ["order_4", "order_1", "order_5", "order_6", "order_2", "order_3"],
-        },
-    },
-    {
-        title: "题型4 排序",
-        aleart: "将打乱的字词正确排列成句子",
-        ques: "",
-        answer1: "老师",
-        answer2: "不",
-        answer3: "叫我们",
-        answer4: "来",
-        questionType: QuestionType.Ordering,
-        ordering: {
-            prompt: "请把词语按正确顺序排列成句子。",
-            options: [
-                { id: "order_1", text: "不" },
-                { id: "order_2", text: "叫我们" },
-                { id: "order_3", text: "老师" },
-                { id: "order_4", text: "来" },
-                { id: "order_5", text: "学校。" },
-            ],
-            correctOrder: ["order_3", "order_1", "order_2", "order_4", "order_5"],
-        },
-    },
-];
-
-/**
- * 题型 5：情景对话补全题集。
- */
-const TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS: QuestionBankItem[] = [
-    // {
-    //     title: "题型5 情景对话补全",
-    //     aleart: "选择正确的搭配",
-    //     ques: "请选择最合适的句子补全下面的对话。",
-    //     answer1: "谁让你给姐姐买水",
-    //     answer2: "妈妈让你给谁买水",
-    //     answer3: "你给谁买了一瓶水",
-    //     correctAnswerIndex: 0,
-    //     questionType: QuestionType.SplitSentenceChoice,
-    //     splitSentenceChoice: {
-    //         sentence1: "问：_____？",
-    //         sentence2WithBlank: "答：妈妈让我给姐姐买水。",
-    //         options: [
-    //             { id: "split_1_a", text: "谁让你给姐姐买水" },
-    //             { id: "split_1_b", text: "妈妈让你给谁买水" },
-    //             { id: "split_1_c", text: "你给谁买了一瓶水" },
-    //         ],
-    //         correctOptionId: "split_1_a",
-    //     },
-    // },
-    {
-        title: "题型5 情景对话补全",
-        aleart: "选择正确的回答",
-        ques: "老师叫他做什么？",
-        answer1: "老师叫他不看书。",
-        answer2: "老师不叫他看书。",
-        answer3: "老师叫他看书。",
-        correctAnswerIndex: 2,
-        questionType: QuestionType.SplitSentenceChoice,
-        splitSentenceChoice: {
-            sentence1: "问：老师叫他做什么？",
-            sentence2WithBlank: "答：_______________",
-            options: [
-                { id: "split_1_a", text: "老师叫他不看书。" },
-                { id: "split_1_b", text: "老师不叫他看书。" },
-                { id: "split_1_c", text: "老师叫他看书。" },
-            ],
-            correctOptionId: "split_1_c",
-        },
-    },
-    {
-        title: "题型5 情景对话补全",
-        aleart: "选择正确的回答",
-        ques: "他生病了，妈妈让他去玩吗？",
-        answer1: "妈妈不让他去玩。",
-        answer2: "妈妈让他不去玩。",
-        answer3: "爸爸不让他去玩。",
         correctAnswerIndex: 0,
-        questionType: QuestionType.SplitSentenceChoice,
-        splitSentenceChoice: {
-            sentence1: "问：他生病了，妈妈让他去玩吗？",
-            sentence2WithBlank: "答：________________________",
-            options: [
-                { id: "split_1_a", text: "妈妈不让他去玩。" },
-                { id: "split_1_b", text: "妈妈让他不去玩。" },
-                { id: "split_1_c", text: "爸爸不让他去玩。" },
-            ],
-            correctOptionId: "split_1_a",
-        },
-    },
-];
+        matching,
+    };
+}
 
-/**
- * 题型 6：判断题题集。
- */
-const TEST_CHECK_RIGHT_QUESTIONS: QuestionBankItem[] = [
-    // {
-    //     title: "题型6 判断题",
-    //     aleart: "判断下面语句是否正确",
-    //     ques: "妈妈叫我回家吃饭。",
-    //     answer1: "正确",
-    //     answer2: "错误",
-    //     correctAnswerIndex: 0,
-    //     questionType: QuestionType.CheckRight,
-    //     checkRight: {
-    //         prompt: "妈妈叫我回家吃饭。",
-    //         options: [
-    //             { id: "check_1_a", text: "√" },
-    //             { id: "check_1_b", text: "×" },
-    //         ],
-    //         correctOptionId: "check_1_a",
-    //     },
-    // },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "老师让我去学校。",
-        answer1: "正确",
-        answer2: "错误",
+function makeOrderingQuestion(item: WordsConfigItem): QuestionBankItem | null {
+    const parts = toText(item.sort_sentence)
+        .split("|")
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+    if (parts.length <= 0) {
+        return null;
+    }
+
+    const correctOptions = parts.map((text, index) => makeOption(`order_${item.id}_${index + 1}`, text));
+    const displayOptions = correctOptions.length > 1
+        ? correctOptions.slice().reverse()
+        : correctOptions.slice();
+    const ordering: OrderingQuestionData = {
+        prompt: toText(item.prompt),
+        options: displayOptions,
+        correctOrder: correctOptions.map((option) => option.id),
+    };
+
+    return {
+        questionType: QuestionType.Ordering,
+        title: "",
+        aleart: ordering.prompt,
+        ques: ordering.prompt,
+        answer1: parts[0] || "",
+        answer2: parts[1] || "",
+        answer3: parts[2] || "",
+        answer4: parts[3] || "",
         correctAnswerIndex: 0,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "老师让我去学校。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_a",
-        },
-    },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "妈妈请我给妹妹帮忙。",
-        answer1: "正确",
-        answer2: "错误",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "妈妈请我给妹妹帮忙。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_a",
-        },
-    },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "爸爸不让我去接他。",
-        answer1: "正确",
-        answer2: "错误",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "爸爸不让我去接他。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_a",
-        },
-    },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "医生让不我喝冷水。",
-        answer1: "正确",
-        answer2: "错误",
-        correctAnswerIndex: 1,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "医生让不我喝冷水。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_b",
-        },
-    },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "姐姐不请我吃晚饭。",
-        answer1: "正确",
-        answer2: "错误",
-        correctAnswerIndex: 0,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "姐姐不请我吃晚饭。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_a",
-        },
-    },
-    {
-        title: "题型6 判断题",
-        aleart: "判断下面语句是否正确",
-        ques: "老师让我不去她家。",
-        answer1: "正确",
-        answer2: "错误",
-        correctAnswerIndex: 1,
-        questionType: QuestionType.CheckRight,
-        checkRight: {
-            prompt: "老师让我不去她家。",
-            options: [
-                { id: "check_1_a", text: "正确" },
-                { id: "check_1_b", text: "错误" },
-            ],
-            correctOptionId: "check_1_b",
-        },
-    },
-];
+        ordering,
+    };
+}
 
-/**
- * 战斗题集轮换顺序。
- * 第 1 轮使用数组 0，第 2 轮使用数组 1，以此类推；
- * 超过 6 轮后从第 1 个题集重新开始轮询。
- */
-const TEST_BATTLE_QUESTION_SETS: QuestionBankItem[][] = [
-    TEST_FILL_BLANK_CHOICE_QUESTIONS,
-    TEST_IMAGE_CHOICE_QUESTIONS,
-    TEST_MATCHING_QUESTIONS,
-    TEST_ORDERING_QUESTIONS,
-    TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS,
-    TEST_CHECK_RIGHT_QUESTIONS,
-];
+function makeQuestionBankItem(item: WordsConfigItem): QuestionBankItem | null {
+    if (item.question_type === 1) {
+        return makeCheckRightQuestion(item);
+    }
+    if (item.question_type === 2) {
+        return makeTwoChoiceQuestion(item);
+    }
+    if (item.question_type === 3) {
+        return makeThreeChoiceQuestion(item);
+    }
+    if (item.question_type === 4) {
+        return makeMatchingQuestion(item);
+    }
+    if (item.question_type === 5) {
+        return makeOrderingQuestion(item);
+    }
+    return null;
+}
 
-const ACTIVE_BATTLE_QUESTION_SETS: QuestionBankItem[][] = [
-    TEST_FILL_BLANK_CHOICE_QUESTIONS,
-    TEST_IMAGE_CHOICE_QUESTIONS,
-    TEST_MATCHING_QUESTIONS,
-    TEST_ORDERING_QUESTIONS,
-    TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS,
-    TEST_CHECK_RIGHT_QUESTIONS,
-];
+function getQuestionSetIndex(item: WordsConfigItem): number {
+    if (item.question_type === 1) {
+        return QuestionType.CheckRight - 1;
+    }
+    if (item.question_type === 2) {
+        return QuestionType.FillBlankChoice - 1;
+    }
+    if (item.question_type === 3) {
+        return QuestionType.SplitSentenceChoice - 1;
+    }
+    if (item.question_type === 4) {
+        return QuestionType.Matching - 1;
+    }
+    if (item.question_type === 5) {
+        return QuestionType.Ordering - 1;
+    }
+    return -1;
+}
 
-/**
- * 准备阶段仍然需要一个完整题库做题型轮询，因此将 6 个题集汇总为总题库。
- * 战斗阶段不直接使用该数组选题，而是通过 TEST_BATTLE_QUESTION_SETS 按轮次选择单一题集。
- */
-const TEST_QUESTION_BANK: QuestionBankItem[] = ([] as QuestionBankItem[]).concat(
-    TEST_FILL_BLANK_CHOICE_QUESTIONS,
-    TEST_IMAGE_CHOICE_QUESTIONS,
-    TEST_MATCHING_QUESTIONS,
-    TEST_ORDERING_QUESTIONS,
-    TEST_SPLIT_SENTENCE_CHOICE_QUESTIONS,
-    TEST_CHECK_RIGHT_QUESTIONS
-);
+function normalizeUnitId(unitId: number = DEFAULT_UNIT_ID): number {
+    const normalizedUnitId = Math.floor(Number(unitId));
+    return isFinite(normalizedUnitId) && normalizedUnitId > 0 ? normalizedUnitId : DEFAULT_UNIT_ID;
+}
 
-/**
- * 将任意题目索引归一化为数组内可用下标，支持负数和超过数组长度的索引。
- */
+function getRoundQuestionSetIndex(round: number): number {
+    const normalizedRoundIndex = getLoopIndex(Math.max(1, Math.floor(round)) - 1, ROUND_TO_QUESTION_SET_INDEX.length);
+    return ROUND_TO_QUESTION_SET_INDEX[normalizedRoundIndex];
+}
+
+function getQuestionTypeBySetIndex(setIndex: number): QuestionType {
+    return (setIndex + 1) as QuestionType;
+}
+
+function buildQuestionSetsFromConfig(unitId: number = DEFAULT_UNIT_ID): QuestionBankItem[][] {
+    const sets: QuestionBankItem[][] = [];
+    for (let i = 0; i < QUESTION_SET_COUNT; i += 1) {
+        sets.push([]);
+    }
+
+    const normalizedUnitId = normalizeUnitId(unitId);
+    const configs = WordsConfig.getInstance().getAllConfigs() as { [key: number]: WordsConfigItem };
+    Object.keys(configs)
+        .map((key) => configs[Number(key)])
+        .filter((item) => !!item && Number(item.unit_id) === normalizedUnitId)
+        .sort((a, b) => a.id - b.id)
+        .forEach((item) => {
+            const setIndex = getQuestionSetIndex(item);
+            const question = makeQuestionBankItem(item);
+            if (setIndex >= 0 && question) {
+                sets[setIndex].push(question);
+            }
+        });
+
+    return sets;
+}
+
+function getAllQuestions(questionSets: QuestionBankItem[][]): QuestionBankItem[] {
+    return ([] as QuestionBankItem[]).concat(...questionSets);
+}
+
 function getLoopIndex(index: number, length: number): number {
     if (length <= 0) {
         return 0;
@@ -656,21 +287,29 @@ function getLoopIndex(index: number, length: number): number {
     return ((normalizedIndex % length) + length) % length;
 }
 
-/**
- * 根据当前轮次选择本轮使用的题集。
- * 固定映射：
- * 1=>题型6，2=>题型1，3=>题型5，4=>题型3，5=>题型4。
- * 准备阶段和战斗阶段都使用该方法，确保同一轮只出现单一题型。
- */
-function getQuestionSetByRound(round: number): QuestionBankItem[] {
-    if (ACTIVE_BATTLE_QUESTION_SETS.length <= 0) {
-        return TEST_QUESTION_BANK;
+function getQuestionSetByRound(round: number, unitId: number = DEFAULT_UNIT_ID): QuestionBankItem[] {
+    const questionSets = buildQuestionSetsFromConfig(unitId);
+    const allQuestions = getAllQuestions(questionSets);
+    if (allQuestions.length <= 0) {
+        return [];
     }
-    const roundToQuestionSetIndex = [5, 0, 4, 2, 3];
-    const normalizedRoundIndex = getLoopIndex(Math.max(1, Math.floor(round)) - 1, roundToQuestionSetIndex.length);
-    const roundIndex = roundToQuestionSetIndex[normalizedRoundIndex];
-    const selectedSet = ACTIVE_BATTLE_QUESTION_SETS[roundIndex];
-    return selectedSet && selectedSet.length > 0 ? selectedSet : TEST_QUESTION_BANK;
+
+    const roundIndex = getRoundQuestionSetIndex(round);
+    const selectedSet = questionSets[roundIndex];
+    return selectedSet && selectedSet.length > 0 ? selectedSet : allQuestions;
+}
+
+function makeEmptyQuestion(prefix: string, index: number): QuestionItem {
+    return {
+        id: `${prefix}_${index + 1}`,
+        questionType: QuestionType.CheckRight,
+        title: "",
+        aleart: "",
+        ques: "",
+        answer1: "",
+        answer2: "",
+        correctAnswerIndex: 0,
+    };
 }
 
 function makeQuestion(prefix: string, index: number, source: QuestionBankItem): QuestionItem {
@@ -694,9 +333,19 @@ function makeQuestion(prefix: string, index: number, source: QuestionBankItem): 
     };
 }
 
-export function buildPrepareQuestionList(totalCount: number, prepareRound: number = 1): QuestionItem[] {
+export function getRoundQuestionSetInfo(prepareRound: number = 1, unitId: number = DEFAULT_UNIT_ID): { questionType: QuestionType; questionCount: number } {
+    const roundIndex = getRoundQuestionSetIndex(prepareRound);
+    const questionSets = buildQuestionSetsFromConfig(unitId);
+    const selectedSet = questionSets[roundIndex] || [];
+    return {
+        questionType: getQuestionTypeBySetIndex(roundIndex),
+        questionCount: selectedSet.length,
+    };
+}
+
+export function buildPrepareQuestionList(totalCount: number, prepareRound: number = 1, unitId: number = DEFAULT_UNIT_ID): QuestionItem[] {
     const list: QuestionItem[] = [];
-    const questionSet = getQuestionSetByRound(prepareRound);
+    const questionSet = getQuestionSetByRound(prepareRound, unitId);
     if (questionSet.length <= 0 || totalCount <= 0) {
         return list;
     }
@@ -709,12 +358,12 @@ export function buildPrepareQuestionList(totalCount: number, prepareRound: numbe
     return list;
 }
 
-/**
- * 构建战斗题目。
- * 同一轮战斗只从一个题集中取题，questionIndex 控制在该题集内的轮询位置。
- */
-export function buildBattleQuestion(_mode: QuestionMode, questionIndex: number, battleRound: number = 1): QuestionItem {
-    const questionSet = getQuestionSetByRound(battleRound);
+export function buildBattleQuestion(_mode: QuestionMode, questionIndex: number, battleRound: number = 1, unitId: number = DEFAULT_UNIT_ID): QuestionItem {
+    const questionSet = getQuestionSetByRound(battleRound, unitId);
+    if (questionSet.length <= 0) {
+        return makeEmptyQuestion(`battle_r${Math.max(1, Math.floor(battleRound))}`, questionIndex);
+    }
+
     const source = questionSet[getLoopIndex(questionIndex, questionSet.length)];
     return makeQuestion(`battle_r${Math.max(1, Math.floor(battleRound))}`, questionIndex, source);
 }

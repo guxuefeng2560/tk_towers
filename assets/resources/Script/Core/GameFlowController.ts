@@ -50,7 +50,7 @@ export default class GameFlowController {
             onSpeedUp: () => this.cycleCarBaseSpeed(),
             onRoller: () => this.onSkillClick("roller"),
             onBomb: () => this.onSkillClick("bomb"),
-            onQuestionOption: (index) => this.onQuestionOption(index),
+            onQuestionOption: (index, detail) => this.onQuestionOption(index, detail),
             onRetryPrepare: () => this.returnToPrepareFromFail(),
             onCloseWinResult: () => this.resetRun(true),
         });
@@ -169,13 +169,13 @@ export default class GameFlowController {
         this.changePhase(GamePhase.QuestionPause);
     }
 
-    private answerBattleQuestion(optionIndex: number): void {
+    private answerBattleQuestion(optionIndex: number, detail?: any): void {
         if (!this.currentBattleQuestion) {
             return;
         }
 
         const isCorrect = DebugConfig.demoAlwaysCorrect
-            || this.isBattleAnswerCorrect(this.currentBattleQuestion, optionIndex);
+            || this.isBattleAnswerCorrect(this.currentBattleQuestion, optionIndex, detail);
         this.runtime.context.totalAnswered += 1;
         this.battleQuestionIndexInRound += 1;
         if (isCorrect) {
@@ -195,17 +195,17 @@ export default class GameFlowController {
         }
     }
 
-    private onQuestionOption(index: number): void {
+    private onQuestionOption(index: number, detail?: any): void {
         if (this.runtime.context.phase === GamePhase.Prepare) {
             if (this.prepareFlowLocked) {
                 return;
             }
-            this.handlePrepareAnswer(this.prepareController.answerQuestion(index));
+            this.handlePrepareAnswer(this.prepareController.answerQuestion(index, detail));
             return;
         }
 
         if (this.runtime.context.phase === GamePhase.QuestionPause) {
-            this.answerBattleQuestion(index);
+            this.answerBattleQuestion(index, detail);
         }
     }
 
@@ -541,8 +541,17 @@ export default class GameFlowController {
         return "C";
     }
 
-    private isBattleAnswerCorrect(question: QuestionItem, optionIndex: number): boolean {
-        if (question.questionType === QuestionType.Matching || question.questionType === QuestionType.Ordering) {
+    private isBattleAnswerCorrect(question: QuestionItem, optionIndex: number, detail?: any): boolean {
+        if (question.questionType === QuestionType.Matching) {
+            const nowCount = detail && detail.matchingCorrectCount !== undefined
+                ? Math.floor(detail.matchingCorrectCount)
+                : -1;
+            const totalCount = detail && detail.matchingTotalCount !== undefined
+                ? Math.floor(detail.matchingTotalCount)
+                : (question.matching ? Math.min(question.matching.leftOptions.length, question.matching.rightOptions.length) : 0);
+            return totalCount > 0 && nowCount === totalCount;
+        }
+        if (question.questionType === QuestionType.Ordering) {
             return optionIndex === 0;
         }
         return optionIndex === (question.correctAnswerIndex ?? 0);
@@ -554,7 +563,7 @@ export default class GameFlowController {
     }
 
     private getNextPrepareQuestionViewIndex(): number {
-        const availableViewIndices = [5, 0, 4, 2, 3];
+        const availableViewIndices = [2, 0, 4, 2, 3, 5];
         const totalTypeCount = Math.max(1, availableViewIndices.length);
         const roundIndex = ((Math.max(1, this.runtime.context.currentRound) - 1) % totalTypeCount + totalTypeCount) % totalTypeCount;
         const targetViewIndex = availableViewIndices[roundIndex];

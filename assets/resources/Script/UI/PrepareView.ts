@@ -44,6 +44,7 @@ export default class PrepareView {
 
     private readonly refs: SceneRefs;
     private readonly startButton: cc.Node | null;
+    private readonly answerCompleteTips: cc.Node | null;
     private readonly taskNodes: Record<PrepareTaskKey, cc.Node | null>;
     private readonly taskLabels: Record<PrepareTaskKey, cc.Label | null>;
     private readonly skipButton: cc.Node | null;
@@ -62,21 +63,22 @@ export default class PrepareView {
         this.refs = refs;
         this.root = refs.btnUpLayout;
         this.startButton = refs.btnStart;
+        this.answerCompleteTips = refs.labelAnsCompleteTips;
         this.taskNodes = {
             [PrepareTaskKey.BuyCar]: refs.btnBuyCar,
             [PrepareTaskKey.UnlockSkill]: refs.btnUnlockSkill,
             [PrepareTaskKey.Hurt]: refs.btnUpHurt,
             [PrepareTaskKey.Hp]: refs.btnUpHp,
-            [PrepareTaskKey.UnlockDef]: refs.btnUnlockDef,
-            [PrepareTaskKey.Energy]: refs.btnUpEnergy,
+            [PrepareTaskKey.UnlockDef]: refs.btnUnlockDef
+            // [PrepareTaskKey.Energy]: refs.btnUpEnergy,
         };
         this.taskLabels = {
             [PrepareTaskKey.BuyCar]: this.findInnerLabel(refs.btnBuyCar),
             [PrepareTaskKey.UnlockSkill]: this.findInnerLabel(refs.btnUnlockSkill),
             [PrepareTaskKey.Hurt]: refs.labelHurt,
             [PrepareTaskKey.Hp]: refs.labelHp,
-            [PrepareTaskKey.UnlockDef]: this.findInnerLabel(refs.btnUnlockDef),
-            [PrepareTaskKey.Energy]: refs.labelEnergyRate,
+            [PrepareTaskKey.UnlockDef]: this.findInnerLabel(refs.btnUnlockDef)
+            // [PrepareTaskKey.Energy]: refs.labelEnergyRate,
         };
         this.skipButton = this.createSkipButton(target, onSkipPrepare);
 
@@ -85,6 +87,9 @@ export default class PrepareView {
                 AudioManager.getInstance().playSFX(AudioID.AudioID_Btn_Click);
                 onStartBattle();
             }, target);
+        }
+        if (this.answerCompleteTips) {
+            this.answerCompleteTips.active = false;
         }
         if (this.refs.btnCode) {
             this.refs.btnCode.active = true;
@@ -102,6 +107,10 @@ export default class PrepareView {
         if (this.startButton) {
             this.stopStartButtonBreathing();
             this.startButton.active = false;
+        }
+        if (this.answerCompleteTips) {
+            this.stopNodeBreathing(this.answerCompleteTips);
+            this.answerCompleteTips.active = false;
         }
         if (this.skipButton) {
             this.skipButton.active = false;
@@ -162,6 +171,15 @@ export default class PrepareView {
                 this.playStartButtonBreathing();
             } else {
                 this.stopStartButtonBreathing();
+            }
+        }
+        if (this.answerCompleteTips) {
+            this.answerCompleteTips.active = this.active && data.showStartButton;
+            this.answerCompleteTips.opacity = data.showStartButton ? 255 : 0;
+            if (this.answerCompleteTips.active) {
+                this.playNodeBreathing(this.answerCompleteTips);
+            } else {
+                this.stopNodeBreathing(this.answerCompleteTips);
             }
         }
         if (this.refs.powerBar) {
@@ -235,10 +253,10 @@ export default class PrepareView {
         }
 
         if (task.key === PrepareTaskKey.Hurt) {
-            this.renderPointGroup(this.refs.hurtPointNodes, task.progress, node.active);
+            this.renderPointGroup(this.refs.hurtPointNodes, task.progress, task.visible);
         }
         if (task.key === PrepareTaskKey.Hp) {
-            this.renderPointGroup(this.refs.hpPointNodes, task.progress, node.active);
+            this.renderPointGroup(this.refs.hpPointNodes, task.progress, task.visible);
         }
     }
 
@@ -423,15 +441,26 @@ export default class PrepareView {
         if (!this.startButton) {
             return;
         }
-        const startButtonAny = this.startButton as any;
-        if (startButtonAny.__breathing) {
+        this.playNodeBreathing(this.startButton);
+    }
+
+    private stopStartButtonBreathing(): void {
+        if (!this.startButton) {
+            return;
+        }
+        this.stopNodeBreathing(this.startButton);
+    }
+
+    private playNodeBreathing(node: cc.Node): void {
+        const nodeAny = node as any;
+        if (nodeAny.__breathing) {
             return;
         }
 
-        startButtonAny.__breathing = true;
-        this.startButton.stopAllActions();
-        this.startButton.scale = 1;
-        this.startButton.runAction(
+        nodeAny.__breathing = true;
+        node.stopAllActions();
+        node.scale = 1;
+        node.runAction(
             cc.repeatForever(
                 cc.sequence(
                     cc.scaleTo(0.8, PrepareView.START_BUTTON_MAX_SCALE).easing(cc.easeSineInOut()),
@@ -441,13 +470,10 @@ export default class PrepareView {
         );
     }
 
-    private stopStartButtonBreathing(): void {
-        if (!this.startButton) {
-            return;
-        }
-        this.startButton.stopAllActions();
-        this.startButton.scale = 1;
-        (this.startButton as any).__breathing = false;
+    private stopNodeBreathing(node: cc.Node): void {
+        node.stopAllActions();
+        node.scale = 1;
+        (node as any).__breathing = false;
     }
 
     private createSkipButton(target: any, onSkipPrepare: () => void): cc.Node | null {

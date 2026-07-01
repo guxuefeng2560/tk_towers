@@ -15,13 +15,13 @@ export const GameConfig = {
     },
 
     prepare: {
-        totalQuestionCount: 16,
+        totalQuestionCount: 6,
         demoAlwaysCorrect: false,
     },
 
     player: {
         maxHp: 1800,
-        baseAttack: 350,
+        baseAttack: 35,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,

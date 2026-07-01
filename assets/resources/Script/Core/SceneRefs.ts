@@ -3,6 +3,7 @@ export interface SceneRefs {
     farMapLayout: cc.Node | null;
     nodeCamera: cc.Node | null;
     bgNodes: cc.Node[];
+    labelAnsCompleteTips: cc.Node | null;
     heroNode: cc.Node | null;
     flagNode: cc.Node | null;
     sanNode: cc.Node | null;

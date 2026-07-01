@@ -131,7 +131,7 @@ export class Constants {
     /** 加载场景 */
     static readonly SCENE_LOADING = "Entry";
     /** 主场景 */
-    static readonly SCENE_MAIN = "TD_MainScene";
+    static readonly SCENE_MAIN = "TowerDefenseScene";
     /** 战斗场景 */
     static readonly SCENE_BATTLE = "TD_BattleScene";
 

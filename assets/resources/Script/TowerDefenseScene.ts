@@ -157,6 +157,9 @@ export default class TowerDefenseScene extends cc.Component {
     @property([cc.Node])
     NodeBossVec: cc.Node[] = [];
 
+    @property(cc.Node)
+    LabelAnsCompleteTips: cc.Node = null;
+
 
     private runtime: GameRuntime = null;
     private flowController: GameFlowController = null;
@@ -170,6 +173,7 @@ export default class TowerDefenseScene extends cc.Component {
             farMapLayout: this.NodeFarMap,
             nodeCamera: this.NodeCamera,
             bgNodes: this.NodeBgArr,
+            labelAnsCompleteTips: this.LabelAnsCompleteTips,
             heroNode: this.NodeHero,
             flagNode: this.NodeFlag,
             sanNode: this.NodeSan,

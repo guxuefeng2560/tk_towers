@@ -38,7 +38,7 @@ export enum PrepareTaskKey {
     Hurt = "hurt",
     Hp = "hp",
     UnlockDef = "unlockDef",
-    Energy = "energy",
+    // Energy = "energy",
 }
 
 export interface BossMonsterRatios {

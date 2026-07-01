@@ -12,16 +12,22 @@ export interface QuestionViewData {
     matching?: MatchingQuestionData;
 }
 
+type MatchPairState = "correct" | "wrong" | null;
+type OptionFrameState = "default" | "selected" | "correct" | "wrong";
+
 /** 匹配 */
 @ccclass
 export default class QuestionView3 extends QuestionViewBase {
     private static readonly BAR_DEFAULT_PATH = "Texture/questionUI/bar_7";
     private static readonly BAR_SELECTED_PATH = "Texture/questionUI/bar_4";
+    private static readonly BAR_CORRECT_PATH = "Texture/questionUI/bar_1";
+    private static readonly BAR_WRONG_PATH = "Texture/questionUI/bar_2";
     private static readonly STATE_RIGHT_PATH = "Texture/questionUI/right";
     private static readonly STATE_WRONG_PATH = "Texture/questionUI/wrong";
 
-    @property(cc.Node)
-    submitBtn: cc.Node = null;
+    private static readonly LABEL_OUTLINE_DEFAULT = new cc.Color(154, 99, 50, 255);
+    private static readonly LABEL_OUTLINE_CORRECT = new cc.Color(18, 110, 140, 255);
+    private static readonly LABEL_OUTLINE_WRONG = new cc.Color(175, 49, 49, 255);
 
     @property(cc.Node)
     stateImg: cc.Node = null;
@@ -32,6 +38,8 @@ export default class QuestionView3 extends QuestionViewBase {
     private static readonly SWAP_DURATION = 0.18;
     private static barDefaultFrame: cc.SpriteFrame | null = null;
     private static barSelectedFrame: cc.SpriteFrame | null = null;
+    private static barCorrectFrame: cc.SpriteFrame | null = null;
+    private static barWrongFrame: cc.SpriteFrame | null = null;
     private static stateRightFrame: cc.SpriteFrame | null = null;
     private static stateWrongFrame: cc.SpriteFrame | null = null;
     private static framesLoadingStarted = false;
@@ -41,21 +49,24 @@ export default class QuestionView3 extends QuestionViewBase {
     private leftLabel: cc.Label | null = null;
     private alertLabel: cc.Label | null = null;
     private leftOptionNodes: Array<cc.Node | null> = [];
+    private initialLeftOptionNodes: Array<cc.Node | null> = [];
     @property([cc.Label])
     rightOptionLabels: cc.Label[] = [];
 
     private rightOptionNodes: Array<cc.Node | null> = [];
     private initialRightOptionNodes: Array<cc.Node | null> = [];
-    private submitNode: cc.Node | null = null;
-    private cancelBtn: cc.Node | null = null;
-    private onSelect: ((index: number) => void) | null = null;
+    private onSelect: ((index: number, detail?: any) => void) | null = null;
     private lastData: QuestionViewData | null = null;
     private inputLocked = false;
     private isBattleMode = false;
     private selectedLeftIndex = -1;
     private selectedRightIndex = -1;
     private matchingData: MatchingQuestionData | null = null;
+    private leftOptionOrder: number[] = [];
     private rightOptionOrder: number[] = [];
+    private pairStates: MatchPairState[] = [];
+    private matchingResultSent = false;
+    private readonly leftSlotPositions: cc.Vec2[] = [];
     private readonly rightSlotPositions: cc.Vec2[] = [];
 
     protected onLoad(): void {
@@ -67,19 +78,19 @@ export default class QuestionView3 extends QuestionViewBase {
         this.alertLabel = this.findLabel("LabelAlert");
         this.leftOptionNodes = [this.findContentNode("bg1"), this.findContentNode("bg2"), this.findContentNode("bg3")];
         this.rightOptionNodes = [this.findContentNode("rbg1"), this.findContentNode("rbg2"), this.findContentNode("rbg3")];
+        this.initialLeftOptionNodes = this.leftOptionNodes.slice();
         this.initialRightOptionNodes = this.rightOptionNodes.slice();
-        this.submitNode = this.findContentNode("BtnSure");
+        this.hideLegacyActionButtons();
+        this.leftSlotPositions.push(...this.leftOptionNodes.map((node) => node ? cc.v2(node.x, node.y) : cc.v2()));
         this.rightSlotPositions.push(...this.rightOptionNodes.map((node) => node ? cc.v2(node.x, node.y) : cc.v2()));
         this.preloadFrames();
-        this.bindSubmitNode();
-        this.bindCancelNode();
         this.hideImmediate();
     }
 
-    public initialize(onSelect: (index: number) => void): void {
+    public initialize(onSelect: (index: number, detail?: any) => void): void {
         this.onSelect = onSelect;
-        this.leftOptionNodes.forEach((node, index) => this.bindSideNode(node, "left", index));
-        this.rightOptionNodes.forEach((node, index) => this.bindSideNode(node, "right", index));
+        this.leftOptionNodes.forEach((node) => this.bindSideNode(node, "left"));
+        this.rightOptionNodes.forEach((node) => this.bindSideNode(node, "right"));
     }
 
     public setActive(active: boolean): void {
@@ -96,11 +107,14 @@ export default class QuestionView3 extends QuestionViewBase {
         this.matchingData = data.matching || null;
         this.selectedLeftIndex = -1;
         this.selectedRightIndex = -1;
-        this.restoreRightOptionNodes();
+        this.matchingResultSent = false;
+        this.restoreOptionNodes();
+        this.leftOptionOrder = this.buildLeftOptionOrder();
         this.rightOptionOrder = this.buildShuffledRightOptionOrder();
+        this.pairStates = this.leftOptionOrder.map(() => null);
         this.inputLocked = false;
         this.resetOptionState();
-        this.setSubmitVisible(false);
+        this.hideLegacyActionButtons();
         this.resetStateImage();
         this.setHeaderVisible(!this.isBattleMode);
 
@@ -120,6 +134,7 @@ export default class QuestionView3 extends QuestionViewBase {
             }
         }
 
+        this.applyLeftOptionOrderToView();
         this.applyRightOptionOrderToView();
     }
 
@@ -135,7 +150,12 @@ export default class QuestionView3 extends QuestionViewBase {
         this.inputLocked = false;
         this.selectedLeftIndex = -1;
         this.selectedRightIndex = -1;
-        this.restoreRightOptionNodes();
+        this.matchingData = null;
+        this.matchingResultSent = false;
+        this.restoreOptionNodes();
+        this.leftOptionOrder = [];
+        this.rightOptionOrder = [];
+        this.pairStates = [];
         this.node.stopAllActions();
         if (this.contentRoot) {
             this.contentRoot.stopAllActions();
@@ -144,7 +164,7 @@ export default class QuestionView3 extends QuestionViewBase {
             this.contentRoot.setPosition(this.getRestPosition());
         }
         this.resetOptionState();
-        this.setSubmitVisible(false);
+        this.hideLegacyActionButtons();
         this.resetStateImage();
         this.node.active = false;
     }
@@ -180,7 +200,7 @@ export default class QuestionView3 extends QuestionViewBase {
         return node ? node.getComponent(cc.Label) : null;
     }
 
-    private bindSideNode(node: cc.Node | null, side: "left" | "right", index: number): void {
+    private bindSideNode(node: cc.Node | null, side: "left" | "right"): void {
         if (!node) {
             return;
         }
@@ -191,9 +211,11 @@ export default class QuestionView3 extends QuestionViewBase {
                 return;
             }
 
-            this.setSubmitVisible(true);
             if (side === "left") {
-                this.handleLeftClick(index);
+                const currentLeftIndex = this.leftOptionNodes.findIndex((item) => item === node);
+                if (currentLeftIndex >= 0) {
+                    this.handleLeftClick(currentLeftIndex);
+                }
                 return;
             }
 
@@ -204,32 +226,11 @@ export default class QuestionView3 extends QuestionViewBase {
         }, this);
     }
 
-    private bindSubmitNode(): void {
-        if (!this.submitNode) {
-            return;
-        }
-
-        this.submitNode.targetOff(this);
-        this.submitNode.on(cc.Node.EventType.TOUCH_END, () => {
-            this.submitAnswer();
-        }, this);
-    }
-
-    private bindCancelNode(): void {
-        if (!this.cancelBtn) {
-            return;
-        }
-
-        this.cancelBtn.targetOff(this);
-        this.cancelBtn.on(cc.Node.EventType.TOUCH_END, () => {
-            if (this.inputLocked) {
-                return;
-            }
-            this.clearAllMatches();
-        }, this);
-    }
-
     private handleLeftClick(index: number): void {
+        if (this.isSlotCorrect(index)) {
+            return;
+        }
+
         if (this.selectedLeftIndex === index) {
             this.selectedLeftIndex = -1;
             this.refreshSelectionState();
@@ -242,6 +243,10 @@ export default class QuestionView3 extends QuestionViewBase {
     }
 
     private handleRightClick(index: number): void {
+        if (this.isSlotCorrect(index)) {
+            return;
+        }
+
         if (this.selectedRightIndex === index) {
             this.selectedRightIndex = -1;
             this.refreshSelectionState();
@@ -257,21 +262,20 @@ export default class QuestionView3 extends QuestionViewBase {
         if (this.selectedLeftIndex < 0 || this.selectedRightIndex < 0) {
             return;
         }
-        this.swapRightOptionsToSelectedLeft();
-    }
-
-    private clearAllMatches(): void {
-        this.selectedLeftIndex = -1;
-        this.selectedRightIndex = -1;
-        this.restoreRightOptionNodes();
-        this.rightOptionOrder = this.buildShuffledRightOptionOrder();
-        this.applyRightOptionOrderToView();
-        this.setSubmitVisible(false);
-        this.refreshSelectionState();
+        this.moveSelectedPairToMatchedArea();
     }
 
     private refreshSelectionState(): void {
         this.resetOptionState();
+
+        this.pairStates.forEach((state, index) => {
+            if (!state) {
+                return;
+            }
+
+            this.applyOptionFrame(this.leftOptionNodes[index], state);
+            this.applyOptionFrame(this.rightOptionNodes[index], state);
+        });
 
         if (this.selectedLeftIndex >= 0) {
             this.applyOptionFrame(this.leftOptionNodes[this.selectedLeftIndex], "selected");
@@ -281,115 +285,72 @@ export default class QuestionView3 extends QuestionViewBase {
         }
     }
 
-    private submitAnswer(): void {
-        if (this.inputLocked || !this.matchingData) {
-            return;
-        }
-
-        const requiredPairCount = Math.min(this.matchingData.leftOptions.length, this.matchingData.rightOptions.length);
-        if (this.rightOptionOrder.length !== requiredPairCount) {
-            return;
-        }
-
-        this.inputLocked = true;
-        this.setSubmitVisible(false);
-
-        const isCorrect = this.isMatchingCorrect();
-        this.applyMatchingResult(isCorrect);
-
-        this.node.stopAllActions();
-        this.node.runAction(
-            cc.sequence(
-                cc.delayTime(QUESTION_RESULT_DELAY),
-                cc.callFunc(() => {
-                    if (this.onSelect) {
-                        this.onSelect(isCorrect ? 0 : 1);
-                    }
-                }),
-            ),
-        );
-    }
-
-    private isMatchingCorrect(): boolean {
-        if (!this.matchingData) {
-            return false;
-        }
-
-        return this.matchingData.correctMatches.every((match) => {
-            const leftIndex = this.matchingData!.leftOptions.findIndex((item) => item.id === match.leftId);
-            if (leftIndex < 0 || leftIndex >= this.rightOptionOrder.length) {
-                return false;
-            }
-
-            const currentRightOptionIndex = this.rightOptionOrder[leftIndex];
-            if (currentRightOptionIndex < 0 || currentRightOptionIndex >= this.matchingData!.rightOptions.length) {
-                return false;
-            }
-
-            return this.matchingData!.rightOptions[currentRightOptionIndex].id === match.rightId;
-        });
-    }
-
-    private applyMatchingResult(isCorrect: boolean): void {
-        if (!this.matchingData) {
-            return;
-        }
-
-        this.resetOptionState();
-        this.showStateImage(isCorrect);
-    }
-
-    private swapRightOptionsToSelectedLeft(): void {
+    private moveSelectedPairToMatchedArea(): void {
         if (this.selectedLeftIndex < 0 || this.selectedRightIndex < 0) {
             return;
         }
 
-        const targetSlot = this.selectedLeftIndex;
-        const sourceSlot = this.selectedRightIndex;
-        if (targetSlot === sourceSlot) {
+        if (this.isSlotCorrect(this.selectedLeftIndex) || this.isSlotCorrect(this.selectedRightIndex)) {
             this.selectedLeftIndex = -1;
             this.selectedRightIndex = -1;
             this.refreshSelectionState();
             return;
         }
 
-        const movingNode = this.rightOptionNodes[sourceSlot];
-        const movingOrder = this.rightOptionOrder[sourceSlot];
-        if (!movingNode || movingOrder === undefined) {
-            this.selectedLeftIndex = -1;
-            this.selectedRightIndex = -1;
-            this.refreshSelectionState();
-            return;
-        }
-
-        const nextRightOptionNodes = this.rightOptionNodes.slice();
-        const nextRightOptionOrder = this.rightOptionOrder.slice();
-        nextRightOptionNodes.splice(sourceSlot, 1);
-        nextRightOptionOrder.splice(sourceSlot, 1);
-        nextRightOptionNodes.splice(targetSlot, 0, movingNode);
-        nextRightOptionOrder.splice(targetSlot, 0, movingOrder);
+        const targetSlot = this.getMatchedCount();
+        const isCorrect = this.isSelectedPairCorrect();
+        const nextLeftOptionNodes = this.swapArrayItems(this.leftOptionNodes, this.selectedLeftIndex, targetSlot);
+        const nextLeftOptionOrder = this.swapArrayItems(this.leftOptionOrder, this.selectedLeftIndex, targetSlot);
+        const nextRightOptionNodes = this.swapArrayItems(this.rightOptionNodes, this.selectedRightIndex, targetSlot);
+        const nextRightOptionOrder = this.swapArrayItems(this.rightOptionOrder, this.selectedRightIndex, targetSlot);
+        const nextPairStates = this.pairStates.slice();
+        nextPairStates[targetSlot] = isCorrect ? "correct" : "wrong";
 
         this.inputLocked = true;
         let remaining = 0;
-        const onMoveFinished = (): void => {
-            remaining -= 1;
-            if (remaining > 0) {
+        let finished = false;
+        const finishMove = (): void => {
+            if (finished) {
                 return;
             }
+            finished = true;
 
+            this.leftOptionNodes = nextLeftOptionNodes;
+            this.leftOptionOrder = nextLeftOptionOrder;
             this.rightOptionNodes = nextRightOptionNodes;
             this.rightOptionOrder = nextRightOptionOrder;
-            this.rightOptionNodes.forEach((node, index) => {
-                if (node && this.rightSlotPositions[index]) {
-                    node.setPosition(this.rightSlotPositions[index]);
-                }
-            });
-
+            this.pairStates = nextPairStates;
+            this.snapOptionNodesToSlots();
             this.selectedLeftIndex = -1;
             this.selectedRightIndex = -1;
             this.inputLocked = false;
             this.refreshSelectionState();
+            this.tryFinishMatchingQuestion();
         };
+
+        const onMoveFinished = (): void => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                finishMove();
+            }
+        };
+
+        for (let i = 0; i < nextLeftOptionNodes.length; i += 1) {
+            const node = nextLeftOptionNodes[i];
+            const targetPosition = this.leftSlotPositions[i];
+            if (!node || !targetPosition) {
+                continue;
+            }
+
+            remaining += 1;
+            node.stopAllActions();
+            node.runAction(
+                cc.sequence(
+                    cc.moveTo(QuestionView3.SWAP_DURATION, targetPosition).easing(cc.easeSineInOut()),
+                    cc.callFunc(onMoveFinished),
+                ),
+            );
+        }
 
         for (let i = 0; i < nextRightOptionNodes.length; i += 1) {
             const node = nextRightOptionNodes[i];
@@ -409,12 +370,34 @@ export default class QuestionView3 extends QuestionViewBase {
         }
 
         if (remaining <= 0) {
-            this.rightOptionNodes = nextRightOptionNodes;
-            this.rightOptionOrder = nextRightOptionOrder;
-            this.selectedLeftIndex = -1;
-            this.selectedRightIndex = -1;
-            this.inputLocked = false;
-            this.refreshSelectionState();
+            finishMove();
+        }
+    }
+
+    private applyLeftOptionOrderToView(): void {
+        if (!this.matchingData) {
+            return;
+        }
+
+        for (let i = 0; i < this.leftOptionNodes.length; i += 1) {
+            const node = this.leftOptionNodes[i];
+            const optionIndex = this.leftOptionOrder[i];
+            if (!node) {
+                continue;
+            }
+
+            node.stopAllActions();
+            if (this.leftSlotPositions[i]) {
+                node.setPosition(this.leftSlotPositions[i]);
+            }
+
+            const label = this.getLabelForOptionNode(node, this.initialLeftOptionNodes, this.leftOptionLabels);
+            if (label) {
+                let str = optionIndex >= 0 && optionIndex < this.matchingData.leftOptions.length
+                    ? this.matchingData.leftOptions[optionIndex].text
+                    : "";
+                label.string = `${str}`;
+            }
         }
     }
 
@@ -423,7 +406,6 @@ export default class QuestionView3 extends QuestionViewBase {
             return;
         }
 
-        let arr = ["","",""];
         for (let i = 0; i < this.rightOptionNodes.length; i += 1) {
             const node = this.rightOptionNodes[i];
             const optionIndex = this.rightOptionOrder[i];
@@ -436,7 +418,7 @@ export default class QuestionView3 extends QuestionViewBase {
                 node.setPosition(this.rightSlotPositions[i]);
             }
 
-            const label = this.rightOptionLabels[i];
+            const label = this.getLabelForOptionNode(node, this.initialRightOptionNodes, this.rightOptionLabels);
             if (label) {
                 let str = optionIndex >= 0 && optionIndex < this.matchingData.rightOptions.length
                     ? this.matchingData.rightOptions[optionIndex].text
@@ -446,12 +428,29 @@ export default class QuestionView3 extends QuestionViewBase {
         }
     }
 
-    private restoreRightOptionNodes(): void {
-        if (this.initialRightOptionNodes.length <= 0) {
+    private restoreOptionNodes(): void {
+        if (this.initialLeftOptionNodes.length <= 0 && this.initialRightOptionNodes.length <= 0) {
             return;
         }
 
+        this.leftOptionNodes = this.initialLeftOptionNodes.slice();
         this.rightOptionNodes = this.initialRightOptionNodes.slice();
+        this.snapOptionNodesToSlots();
+    }
+
+    private snapOptionNodesToSlots(): void {
+        for (let i = 0; i < this.leftOptionNodes.length; i += 1) {
+            const node = this.leftOptionNodes[i];
+            if (!node) {
+                continue;
+            }
+
+            node.stopAllActions();
+            if (this.leftSlotPositions[i]) {
+                node.setPosition(this.leftSlotPositions[i]);
+            }
+        }
+
         for (let i = 0; i < this.rightOptionNodes.length; i += 1) {
             const node = this.rightOptionNodes[i];
             if (!node) {
@@ -463,6 +462,14 @@ export default class QuestionView3 extends QuestionViewBase {
                 node.setPosition(this.rightSlotPositions[i]);
             }
         }
+    }
+
+    private buildLeftOptionOrder(): number[] {
+        if (!this.matchingData) {
+            return [];
+        }
+
+        return this.matchingData.leftOptions.map((_, index) => index);
     }
 
     private buildShuffledRightOptionOrder(): number[] {
@@ -480,10 +487,15 @@ export default class QuestionView3 extends QuestionViewBase {
         return order;
     }
 
-    private setSubmitVisible(visible: boolean): void {
-        if (this.submitNode) {
-            this.submitNode.active = visible;
-        }
+    private hideLegacyActionButtons(): void {
+        const buttonNames = ["BtnSure", "BtnCancel", "BtnClose"];
+        buttonNames.forEach((buttonName) => {
+            const node = this.findContentNode(buttonName);
+            if (node) {
+                node.active = false;
+                node.targetOff(this);
+            }
+        });
     }
 
     private setHeaderVisible(visible: boolean): void {
@@ -504,7 +516,7 @@ export default class QuestionView3 extends QuestionViewBase {
         });
     }
 
-    private applyOptionFrame(node: cc.Node | null, state: "default" | "selected"): void {
+    private applyOptionFrame(node: cc.Node | null, state: OptionFrameState): void {
         if (!node) {
             return;
         }
@@ -514,12 +526,19 @@ export default class QuestionView3 extends QuestionViewBase {
             return;
         }
 
-        const spriteFrame = state === "selected"
-            ? (QuestionView3.barSelectedFrame || QuestionView3.barDefaultFrame)
-            : QuestionView3.barDefaultFrame;
+        let spriteFrame = QuestionView3.barDefaultFrame;
+        if (state === "selected") {
+            spriteFrame = QuestionView3.barSelectedFrame || QuestionView3.barDefaultFrame;
+        } else if (state === "correct") {
+            spriteFrame = QuestionView3.barCorrectFrame || QuestionView3.barDefaultFrame;
+        } else if (state === "wrong") {
+            spriteFrame = QuestionView3.barWrongFrame || QuestionView3.barDefaultFrame;
+        }
         if (spriteFrame) {
             sprite.spriteFrame = spriteFrame;
         }
+
+        this.applyOptionLabelOutline(node, state);
     }
 
     private showStateImage(isCorrect: boolean): void {
@@ -575,6 +594,18 @@ export default class QuestionView3 extends QuestionViewBase {
                 this.refreshSelectionState();
             }
         });
+        resources.load(QuestionView3.BAR_CORRECT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.barCorrectFrame = spriteFrame;
+                this.refreshSelectionState();
+            }
+        });
+        resources.load(QuestionView3.BAR_WRONG_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
+            if (!error && spriteFrame) {
+                QuestionView3.barWrongFrame = spriteFrame;
+                this.refreshSelectionState();
+            }
+        });
         resources.load(QuestionView3.STATE_RIGHT_PATH, cc.SpriteFrame, (error: Error | null, spriteFrame: cc.SpriteFrame) => {
             if (!error && spriteFrame) {
                 QuestionView3.stateRightFrame = spriteFrame;
@@ -602,6 +633,159 @@ export default class QuestionView3 extends QuestionViewBase {
 
         const remaining = Math.max(total - current + 1, 0);
         return `${remaining}/${total}`;
+    }
+
+    private isSelectedPairCorrect(): boolean {
+        if (!this.matchingData || this.selectedLeftIndex < 0 || this.selectedRightIndex < 0) {
+            return false;
+        }
+
+        const leftOptionIndex = this.leftOptionOrder[this.selectedLeftIndex];
+        const rightOptionIndex = this.rightOptionOrder[this.selectedRightIndex];
+        if (leftOptionIndex === undefined || rightOptionIndex === undefined) {
+            return false;
+        }
+
+        const leftOption = this.matchingData.leftOptions[leftOptionIndex];
+        const rightOption = this.matchingData.rightOptions[rightOptionIndex];
+        if (!leftOption || !rightOption) {
+            return false;
+        }
+
+        return this.matchingData.correctMatches.some((match) => {
+            return match.leftId === leftOption.id && match.rightId === rightOption.id;
+        });
+    }
+
+    private tryFinishMatchingQuestion(): void {
+        const matchingData = this.matchingData;
+        if (!matchingData || this.matchingResultSent) {
+            return;
+        }
+
+        const totalCount = this.getRequiredPairCount(matchingData);
+        if (totalCount <= 0 || this.getMatchedCount() < totalCount) {
+            return;
+        }
+
+        const nowCount = this.getMatchingCorrectCount();
+        this.matchingResultSent = true;
+        this.inputLocked = true;
+        if (this.isBattleMode) {
+            this.showStateImage(nowCount >= totalCount);
+        } else {
+            this.resetStateImage();
+        }
+
+        this.node.stopAllActions();
+        this.node.runAction(
+            cc.sequence(
+                cc.delayTime(QUESTION_RESULT_DELAY),
+                cc.callFunc(() => {
+                    if (this.onSelect && this.matchingData === matchingData) {
+                        this.onSelect(nowCount, {
+                            matchingCorrectCount: nowCount,
+                            matchingTotalCount: totalCount,
+                        });
+                    }
+                }),
+            ),
+        );
+    }
+
+    private getRequiredPairCount(matchingData: MatchingQuestionData = this.matchingData!): number {
+        if (!matchingData) {
+            return 0;
+        }
+        return Math.min(3, matchingData.leftOptions.length, matchingData.rightOptions.length);
+    }
+
+    private getMatchedCount(): number {
+        let count = 0;
+        for (let i = 0; i < this.pairStates.length; i += 1) {
+            if (this.pairStates[i]) {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
+    private getMatchingCorrectCount(): number {
+        let count = 0;
+        for (let i = 0; i < this.pairStates.length; i += 1) {
+            if (this.pairStates[i] === "correct") {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
+    private isSlotCorrect(index: number): boolean {
+        return index >= 0 && index < this.pairStates.length && this.pairStates[index] === "correct";
+    }
+
+    private swapArrayItems<T>(source: T[], fromIndex: number, toIndex: number): T[] {
+        const result = source.slice();
+        if (fromIndex < 0 || fromIndex >= result.length) {
+            return result;
+        }
+
+        const targetIndex = Math.max(0, Math.min(toIndex, result.length - 1));
+        const temp = result[targetIndex];
+        result[targetIndex] = result[fromIndex];
+        result[fromIndex] = temp;
+        return result;
+    }
+
+    private getLabelForOptionNode(
+        node: cc.Node,
+        initialNodes: Array<cc.Node | null>,
+        labels: cc.Label[],
+    ): cc.Label | null {
+        const index = initialNodes.findIndex((item) => item === node);
+        if (index >= 0 && labels[index]) {
+            return labels[index];
+        }
+        return null;
+    }
+
+    private applyOptionLabelOutline(node: cc.Node, state: OptionFrameState): void {
+        const outlineColor = this.getOutlineColorByState(state);
+        this.getAllLabelsInNode(node).forEach((label) => {
+            const outline = label.getComponent(cc.LabelOutline);
+            if (outline) {
+                outline.color = outlineColor;
+            }
+        });
+    }
+
+    private getOutlineColorByState(state: OptionFrameState): cc.Color {
+        if (state === "correct") {
+            return QuestionView3.LABEL_OUTLINE_CORRECT;
+        }
+        if (state === "wrong") {
+            return QuestionView3.LABEL_OUTLINE_WRONG;
+        }
+        return QuestionView3.LABEL_OUTLINE_DEFAULT;
+    }
+
+    private getAllLabelsInNode(node: cc.Node): cc.Label[] {
+        const labels: cc.Label[] = [];
+        const stack: cc.Node[] = [node];
+        while (stack.length > 0) {
+            const current = stack.pop();
+            if (!current) {
+                continue;
+            }
+
+            const label = current.getComponent(cc.Label);
+            if (label) {
+                labels.push(label);
+            }
+
+            stack.push(...current.children);
+        }
+        return labels;
     }
 
     private getAnchorPosition(anchorNode: cc.Node | null): cc.Vec2 {

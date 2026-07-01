@@ -8,6 +8,7 @@ export interface PrepareRoundState {
     wrongCount: number;
     taskProgress: Record<PrepareTaskKey, number>;
     pendingQuestionIds: string[];
+    wrongQuestionIds: string[];
 }
 
 export class GameContext {
@@ -51,7 +52,9 @@ export class GameContext {
     public reachedDistance = 0;
     public roundStartDistance = 0;
     public currentRound = 1;
+    public currentUnitId = 1;
     public prepareRoundStates: PrepareRoundState[] = [];
+    public questionMaxCorrectCountByKey: { [key: string]: number } = {};
 
     public constructor() {
         this.resetAllProgress();
@@ -77,7 +80,9 @@ export class GameContext {
         this.reachedDistance = 0;
         this.roundStartDistance = 0;
         this.currentRound = 1;
+        this.currentUnitId = 1;
         this.prepareRoundStates = [];
+        this.questionMaxCorrectCountByKey = {};
         this.sawCarHpList = [];
         this.ensurePrepareRoundState(1);
         this.recalculateStats();
@@ -150,7 +155,7 @@ export class GameContext {
             PrepareTaskKey.Hurt,
             PrepareTaskKey.Hp,
             PrepareTaskKey.UnlockDef,
-            PrepareTaskKey.Energy,
+            // PrepareTaskKey.Energy,
         ];
         const requiredCountByTask: Record<PrepareTaskKey, number> = {
             [PrepareTaskKey.BuyCar]: 1,
@@ -158,7 +163,7 @@ export class GameContext {
             [PrepareTaskKey.Hurt]: 5,
             [PrepareTaskKey.Hp]: 3,
             [PrepareTaskKey.UnlockDef]: 1,
-            [PrepareTaskKey.Energy]: 5,
+            // [PrepareTaskKey.Energy]: 5,
         };
 
         for (const taskKey of taskOrder) {
@@ -198,12 +203,40 @@ export class GameContext {
 
         const state = this.ensurePrepareRoundState(round);
         state.pendingQuestionIds = state.pendingQuestionIds.filter((id) => id !== questionId);
+        state.wrongQuestionIds = state.wrongQuestionIds.filter((id) => id !== questionId);
+    }
+
+    public recordPrepareWrongQuestion(questionId: string, round: number = this.currentRound): void {
+        const state = this.ensurePrepareRoundState(round);
+        if (state.wrongQuestionIds.indexOf(questionId) < 0) {
+            state.wrongQuestionIds.push(questionId);
+        }
+    }
+
+    public clearPrepareWrongQuestion(questionId: string, round: number = this.currentRound): void {
+        const state = this.ensurePrepareRoundState(round);
+        state.wrongQuestionIds = state.wrongQuestionIds.filter((id) => id !== questionId);
+    }
+
+    public getQuestionMaxCorrectCount(questionType: number, questionId: string): number {
+        return this.questionMaxCorrectCountByKey[this.getQuestionHistoryKey(questionType, questionId)] || 0;
+    }
+
+    public updateQuestionMaxCorrectCount(questionType: number, questionId: string, count: number): void {
+        const key = this.getQuestionHistoryKey(questionType, questionId);
+        this.questionMaxCorrectCountByKey[key] = Math.max(this.questionMaxCorrectCountByKey[key] || 0, count);
     }
 
     public recordPrepareUpgrade(upgradeType: UpgradeType): void {
         const taskKey = this.getTaskKeyByUpgradeType(upgradeType);
         const state = this.ensurePrepareRoundState();
         state.taskProgress[taskKey] = (state.taskProgress[taskKey] || 0) + 1;
+        this.recalculateStats();
+    }
+
+    public completeCurrentRoundPrepareTask(taskKey: PrepareTaskKey, requiredCount: number): void {
+        const state = this.ensurePrepareRoundState();
+        state.taskProgress[taskKey] = Math.max(state.taskProgress[taskKey] || 0, requiredCount);
         this.recalculateStats();
     }
 
@@ -371,7 +404,7 @@ export class GameContext {
         this.sawCarCount = this.getTotalTaskProgress(PrepareTaskKey.BuyCar);
         this.attackLevel = this.getTotalTaskProgress(PrepareTaskKey.Hurt);
         this.defenseLevel = this.getTotalTaskProgress(PrepareTaskKey.Hp);
-        this.energyRegenLevel = this.getTotalTaskProgress(PrepareTaskKey.Energy);
+        // this.energyRegenLevel = this.getTotalTaskProgress(PrepareTaskKey.Energy);
         this.skillUnlocked = this.getTotalTaskProgress(PrepareTaskKey.UnlockSkill) > 0;
         this.defenseUnlocked = this.getTotalTaskProgress(PrepareTaskKey.UnlockDef) > 0;
         this.playerMaxHp = GameConfig.player.maxHp;
@@ -507,7 +540,7 @@ export class GameContext {
         if (upgradeType === UpgradeType.UnlockDefense) {
             return PrepareTaskKey.UnlockDef;
         }
-        return PrepareTaskKey.Energy;
+        // return PrepareTaskKey.Energy;
     }
 
     private createPrepareRoundState(round: number): PrepareRoundState {
@@ -517,13 +550,14 @@ export class GameContext {
             correctCount: 0,
             wrongCount: 0,
             pendingQuestionIds: [],
+            wrongQuestionIds: [],
             taskProgress: {
                 [PrepareTaskKey.BuyCar]: 0,
                 [PrepareTaskKey.UnlockSkill]: 0,
                 [PrepareTaskKey.Hurt]: 0,
                 [PrepareTaskKey.Hp]: 0,
                 [PrepareTaskKey.UnlockDef]: 0,
-                [PrepareTaskKey.Energy]: 0,
+                // [PrepareTaskKey.Energy]: 0,
             },
         };
     }
@@ -540,6 +574,10 @@ export class GameContext {
         }
 
         return true;
+    }
+
+    private getQuestionHistoryKey(questionType: number, questionId: string): string {
+        return `${questionType}:${questionId}`;
     }
 
     private syncSawCarState(): void {

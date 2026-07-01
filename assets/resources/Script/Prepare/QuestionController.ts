@@ -1,6 +1,6 @@
 import { GameConfig } from "../Core/GameConfig";
-import { QuestionItem, QuestionMode } from "../Core/GameDefines";
-import { buildBattleQuestion, buildPrepareQuestionList } from "../Data/QuestionData";
+import { QuestionItem, QuestionMode, QuestionType } from "../Core/GameDefines";
+import { buildBattleQuestion, buildPrepareQuestionList, getRoundQuestionSetInfo } from "../Data/QuestionData";
 
 export default class QuestionController {
     private prepareQuestions: QuestionItem[];
@@ -13,8 +13,8 @@ export default class QuestionController {
         this.prepareQuestions = buildPrepareQuestionList(totalPrepareQuestions, prepareRound);
     }
 
-    public rebuildPrepareQuestionsByIds(questionIds: string[], prepareRound: number = 1): void {
-        const fullQuestions = buildPrepareQuestionList(GameConfig.prepare.totalQuestionCount, prepareRound);
+    public rebuildPrepareQuestionsByIds(questionIds: string[], prepareRound: number = 1, unitId: number = 1): void {
+        const fullQuestions = buildPrepareQuestionList(GameConfig.prepare.totalQuestionCount, prepareRound, unitId);
         const questionMap = new Map<string, QuestionItem>();
         fullQuestions.forEach((question) => {
             questionMap.set(question.id, question);
@@ -24,8 +24,12 @@ export default class QuestionController {
             .filter((question): question is QuestionItem => !!question);
     }
 
-    public createPrepareQuestionIds(totalPrepareQuestions: number, prepareRound: number = 1): string[] {
-        return buildPrepareQuestionList(totalPrepareQuestions, prepareRound).map((question) => question.id);
+    public createPrepareQuestionIds(totalPrepareQuestions: number, prepareRound: number = 1, unitId: number = 1): string[] {
+        return buildPrepareQuestionList(totalPrepareQuestions, prepareRound, unitId).map((question) => question.id);
+    }
+
+    public getRoundQuestionSetInfo(prepareRound: number = 1, unitId: number = 1): { questionType: QuestionType; questionCount: number } {
+        return getRoundQuestionSetInfo(prepareRound, unitId);
     }
 
     public getPrepareQuestion(index: number): QuestionItem | null {

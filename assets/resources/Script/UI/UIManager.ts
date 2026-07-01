@@ -14,7 +14,7 @@ interface UIManagerCallbacks {
     onSpeedUp: () => void;
     onRoller: () => void;
     onBomb: () => void;
-    onQuestionOption: (index: number) => void;
+    onQuestionOption: (index: number, detail?: any) => void;
     onRetryPrepare: () => void;
     onCloseWinResult: () => void;
 }
@@ -169,7 +169,7 @@ export default class UIManager {
         });
     }
 
-    private loadQuestionView(onQuestionOption: (index: number) => void): void {
+    private loadQuestionView(onQuestionOption: (index: number, detail?: any) => void): void {
         const resources = (cc as any).resources;
         if (!resources || !resources.load) {
             return;
@@ -239,7 +239,7 @@ export default class UIManager {
 }
 
 interface QuestionViewLike extends cc.Component {
-    initialize(onSelect: (index: number) => void): void;
+    initialize(onSelect: (index: number, detail?: any) => void): void;
     openFrom(anchorNode: cc.Node | null, data: QuestionViewData): void;
     closeTo(anchorNode: cc.Node | null, onComplete?: () => void): void;
     hideImmediate(): void;

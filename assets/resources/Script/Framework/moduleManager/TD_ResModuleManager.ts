@@ -32,13 +32,12 @@ export default class ResModuleManager {
      * @param moduleName 
      */
     static init(projectName: string, moduleName: string) {
-        // for (let index = 0; index < moduleName.length; index++) {
-        //     if (moduleName[index] == ResModuleID.Resources) {
-        //         ResModuleManager.mgrMap[ResModuleManager.moduleID] = new ResModule(projectName, '');
-        //     } else {
-                ResModuleManager.mgrMap[moduleName] = new ResModule(projectName, moduleName);
-        //     }
-        // }
+        if (moduleName === ResModuleID.Resources) {
+            ResModuleManager.mgrMap[ResModuleID.Resources] = new ResModule(projectName, "");
+            return;
+        }
+
+        ResModuleManager.mgrMap[moduleName] = new ResModule(projectName, moduleName);
     }
 
     /**
@@ -206,7 +205,8 @@ export default class ResModuleManager {
      * @param id 
      */
     static getName(id: string): string {
-        return ResModuleManager.mgrMap[id].getName();
+        const module = ResModuleManager.mgrMap[id];
+        return module ? module.getName() : id;
     }
 
     /**
@@ -215,6 +215,9 @@ export default class ResModuleManager {
      * @param bundle 
      */
     static setLoaderByBundle(id: string, bundle: cc.AssetManager.Bundle) {
+        if (!ResModuleManager.hasResModule(id)) {
+            ResModuleManager.init(id, id);
+        }
         ResModuleManager.mgrMap[id].setLoaderByBundle(bundle);
     }
 
@@ -231,7 +234,8 @@ export default class ResModuleManager {
      * @param id 
      */
     static getLoader(id: string = ResModuleManager.moduleID): ResLoader {
-        return ResModuleManager.mgrMap[id].getLoader();
+        const module = ResModuleManager.mgrMap[id];
+        return module ? module.getLoader() : null;
     }
 
     /**
@@ -239,7 +243,7 @@ export default class ResModuleManager {
      * @param id 
      */
     static hasLoader(id: string = ResModuleManager.moduleID): boolean {
-        return ResModuleManager.mgrMap[id].hasLoader();
+        return ResModuleManager.hasResModule(id) && ResModuleManager.mgrMap[id].hasLoader();
     }
 
     static hasResModule(id: string = ResModuleManager.moduleID): boolean {
@@ -252,6 +256,10 @@ export default class ResModuleManager {
      * @param callback 
      */
     static loadBundle(moduleID: string, callback: Function) {
+        if (!ResModuleManager.hasResModule(moduleID)) {
+            ResModuleManager.init(moduleID, moduleID);
+        }
+
         if (ResModuleManager.hasLoader(moduleID)) {
             callback();
             return;
@@ -259,6 +267,7 @@ export default class ResModuleManager {
 
         cc.assetManager.loadBundle(ResModuleManager.getName(moduleID), (err, bundle) => {
             if (err) {
+                TKLog.LogErr("ResModuleManager.loadBundle failed:", moduleID, err);
                 return;
             }
 
