@@ -165,25 +165,49 @@ export default class PrepareView {
         });
 
         if (this.startButton) {
+            let activeState = this.startButton.active;
             this.startButton.active = this.active && data.showStartButton;
             this.startButton.opacity = data.showStartButton ? 255 : 0;
             if (this.startButton.active) {
-                this.playStartButtonBreathing();
+                if (!activeState) {
+                    this.playShowAction(this.startButton, function() {
+                        this.playStartButtonBreathing();
+                    }.bind(this))
+                }
             } else {
                 this.stopStartButtonBreathing();
             }
         }
         if (this.answerCompleteTips) {
+            let activeState = this.answerCompleteTips.active;
             this.answerCompleteTips.active = this.active && data.showStartButton;
             this.answerCompleteTips.opacity = data.showStartButton ? 255 : 0;
             if (this.answerCompleteTips.active) {
-                this.playNodeBreathing(this.answerCompleteTips);
+                if (!activeState) {
+                    this.playShowAction(this.answerCompleteTips, function() {
+                        this.playNodeBreathing(this.answerCompleteTips);
+                    }.bind(this))
+                }
             } else {
                 this.stopNodeBreathing(this.answerCompleteTips);
             }
         }
         if (this.refs.powerBar) {
             this.refs.powerBar.node.active = this.active;
+        }
+    }
+
+    public playShowAction(node: cc.Node, callBack: Function) {
+        if (cc.isValid(node)) {
+            node.scale = 0.2;
+            cc.tween(node)
+                .to(0.15, {scale: 1.15})
+                .to(0.05, {scale: 1.0})
+                .delay(0.5)
+                .call(()=>{
+                    callBack && callBack()
+                })
+                .start()
         }
     }
 

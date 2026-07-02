@@ -231,8 +231,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 550,
-      "height": 382
+      "width": 700,
+      "height": 460
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -345,7 +345,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 550,
+      "width": 700,
       "height": 56
     },
     "_anchorPoint": {
@@ -358,7 +358,7 @@
       "ctor": "Float64Array",
       "array": [
         0,
-        162,
+        202,
         0,
         0,
         0,
@@ -421,7 +421,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -150,
+        -200,
         1,
         0,
         0,
@@ -528,7 +528,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        150,
+        200,
         1,
         0,
         0,
@@ -669,8 +669,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 82,
-      "height": 36.76
+      "width": 94,
+      "height": 41.8
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -682,7 +682,7 @@
       "ctor": "Float64Array",
       "array": [
         0,
-        164,
+        203,
         0,
         0,
         0,
@@ -723,8 +723,8 @@
     "_dstBlendFactor": 771,
     "_string": "选择题",
     "_N$string": "选择题",
-    "_fontSize": 26,
-    "_lineHeight": 26,
+    "_fontSize": 30,
+    "_lineHeight": 30,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -800,8 +800,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 53.59,
-      "height": 31.72
+      "width": 67.11,
+      "height": 39.28
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -812,8 +812,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -239,
-        117,
+        -290,
+        145,
         0,
         0,
         0,
@@ -854,8 +854,8 @@
     "_dstBlendFactor": 771,
     "_string": "难度:",
     "_N$string": "难度:",
-    "_fontSize": 22,
-    "_lineHeight": 22,
+    "_fontSize": 28,
+    "_lineHeight": 28,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -940,15 +940,15 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -156.174,
-        114.77600000000001,
+        -205,
+        142,
         0,
         0,
         0,
         0,
         1,
-        1,
-        1,
+        1.2,
+        1.2,
         1
       ]
     },
@@ -1035,7 +1035,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 500,
+      "width": 600,
       "height": 126
     },
     "_anchorPoint": {
@@ -1048,7 +1048,7 @@
       "ctor": "Float64Array",
       "array": [
         0,
-        29,
+        50,
         0,
         0,
         0,
@@ -1145,8 +1145,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 114,
-      "height": 31.72
+      "width": 144,
+      "height": 39.28
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1158,7 +1158,7 @@
       "ctor": "Float64Array",
       "array": [
         191,
-        117,
+        145,
         0,
         0,
         0,
@@ -1199,8 +1199,8 @@
     "_dstBlendFactor": 771,
     "_string": "剩余答题：",
     "_N$string": "剩余答题：",
-    "_fontSize": 22,
-    "_lineHeight": 22,
+    "_fontSize": 28,
+    "_lineHeight": 28,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1276,8 +1276,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 58.39,
-      "height": 31.72
+      "width": 73.22,
+      "height": 39.28
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1289,7 +1289,7 @@
       "ctor": "Float64Array",
       "array": [
         183,
-        117,
+        145,
         0,
         0,
         0,
@@ -1330,8 +1330,8 @@
     "_dstBlendFactor": 771,
     "_string": "16/16",
     "_N$string": "16/16",
-    "_fontSize": 22,
-    "_lineHeight": 22,
+    "_fontSize": 28,
+    "_lineHeight": 28,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1514,8 +1514,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 460,
-      "height": 31.5
+      "width": 520,
+      "height": 37.8
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1527,7 +1527,7 @@
       "ctor": "Float64Array",
       "array": [
         0,
-        31,
+        52,
         0,
         0,
         0,
@@ -1568,8 +1568,8 @@
     "_dstBlendFactor": 771,
     "_string": "妈妈叫我（）",
     "_N$string": "妈妈叫我（）",
-    "_fontSize": 24,
-    "_lineHeight": 25,
+    "_fontSize": 30,
+    "_lineHeight": 30,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1634,8 +1634,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 420,
-      "height": 49
+      "width": 600,
+      "height": 80
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1646,8 +1646,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -2,
-        -73,
+        0,
+        -61,
         0,
         0,
         0,
@@ -1701,8 +1701,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 20.48,
-      "height": 24.16
+      "width": 25.97,
+      "height": 46.84
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1713,7 +1713,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -166,
+        -250,
         3,
         0,
         0,
@@ -1755,8 +1755,8 @@
     "_dstBlendFactor": 771,
     "_string": "A",
     "_N$string": "A",
-    "_fontSize": 24,
-    "_lineHeight": 16,
+    "_fontSize": 32,
+    "_lineHeight": 34,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -1832,7 +1832,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 220,
+      "width": 400,
       "height": 40
     },
     "_anchorPoint": {
@@ -1886,8 +1886,8 @@
     "_dstBlendFactor": 771,
     "_string": "正确",
     "_N$string": "正确",
-    "_fontSize": 24,
-    "_lineHeight": 26,
+    "_fontSize": 32,
+    "_lineHeight": 32,
     "_enableWrapText": false,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -2024,8 +2024,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 420,
-      "height": 49
+      "width": 600,
+      "height": 80
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2036,8 +2036,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -2,
-        -128,
+        0,
+        -155,
         0,
         0,
         0,
@@ -2091,8 +2091,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 20,
-      "height": 24.16
+      "width": 25.33,
+      "height": 46.84
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -2103,7 +2103,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -166,
+        -250,
         1,
         0,
         0,
@@ -2145,8 +2145,8 @@
     "_dstBlendFactor": 771,
     "_string": "B",
     "_N$string": "B",
-    "_fontSize": 24,
-    "_lineHeight": 16,
+    "_fontSize": 32,
+    "_lineHeight": 34,
     "_enableWrapText": true,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -2222,7 +2222,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 220,
+      "width": 400,
       "height": 40
     },
     "_anchorPoint": {
@@ -2276,8 +2276,8 @@
     "_dstBlendFactor": 771,
     "_string": "错误",
     "_N$string": "错误",
-    "_fontSize": 24,
-    "_lineHeight": 26,
+    "_fontSize": 32,
+    "_lineHeight": 32,
     "_enableWrapText": false,
     "_N$file": {
       "__uuid__": "ec1d1bac-140d-4fef-9957-f971d6427bc6"
@@ -2416,8 +2416,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        136,
-        -73,
+        232,
+        -62,
         0,
         0,
         0,
@@ -2523,8 +2523,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        135,
-        -127,
+        231,
+        -157,
         0,
         0,
         0,

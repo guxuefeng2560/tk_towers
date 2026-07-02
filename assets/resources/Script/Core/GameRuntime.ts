@@ -10,6 +10,7 @@ import { randomRange } from "../Util/MathUtil";
 
 export default class GameRuntime {
     private static readonly BG_REUSE_OFFSCREEN_PADDING = 500;
+    private static readonly HERO_POWER_BAR_HEIGHT_Y = 150;
     private static readonly BULLET_PREFAB_PATH = "prefab/bullet";
     private static readonly MONSTER_PREFAB_PATH = "prefab/monster";
     private static readonly CAR_PREFAB_PATH = "prefab/car";
@@ -249,6 +250,23 @@ export default class GameRuntime {
             }
             this.refs.bossNode.y = this.bossLocalY;
         }
+    }
+
+    public syncHeroPowerBarPosition(): void {
+        const heroNode = this.refs.heroNode;
+        const powerBarNode = this.refs.powerBar ? this.refs.powerBar.node : null;
+        const powerBarParent = powerBarNode ? powerBarNode.parent : null;
+        if (!heroNode || !powerBarNode || !powerBarParent) {
+            return;
+        }
+
+        const heroWorldPosition = heroNode.parent
+            ? heroNode.parent.convertToWorldSpaceAR(cc.v2(heroNode.x, heroNode.y))
+            : cc.v2(heroNode.x, heroNode.y);
+        const heroPositionInPowerBarParent = powerBarParent.convertToNodeSpaceAR(heroWorldPosition);
+        powerBarNode.y = heroPositionInPowerBarParent.y
+            + GameRuntime.HERO_POWER_BAR_HEIGHT_Y
+            + this.getActiveCarStackOffset();
     }
 
     public playHeroFailSequence(): void {
@@ -1218,6 +1236,7 @@ export default class GameRuntime {
             this.refs.btnStart,
             this.refs.btnUpLayout,
             this.refs.btnBattleLayout,
+            this.refs.powerBar ? this.refs.powerBar.node : null,
             this.refs.heroProgressBar ? this.refs.heroProgressBar.node.parent : null,
             // this.refs.carProgressBar ? this.refs.carProgressBar.node.parent : null,
             this.refs.bossProgressBar ? this.refs.bossProgressBar.node.parent : null,

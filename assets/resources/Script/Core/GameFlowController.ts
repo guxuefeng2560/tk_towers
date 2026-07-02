@@ -281,6 +281,9 @@ export default class GameFlowController {
             const step = steps[index];
             this.prepareController.applyUpgradeStep(step);
             this.refreshPrepareUi(step.key);
+            if (step.key === PrepareTaskKey.BuyCar) {
+                this.runtime.syncHeroPowerBarPosition();
+            }
 
             if (index >= steps.length - 1) {
                 onComplete();
@@ -482,6 +485,7 @@ export default class GameFlowController {
 
         if (phase === GamePhase.Prepare) {
             this.refreshPrepareUi();
+            this.runtime.syncHeroPowerBarPosition();
             const firstPrepareDelay = this.prepareController.getCurrentTaskKey() === PrepareTaskKey.BuyCar
                 ? 0.5
                 : 0;

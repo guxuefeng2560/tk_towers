@@ -106,8 +106,8 @@ export default class CarPrefab extends cc.Component {
         }
         (sawNode as any)[playingKey] = true;
         const basePosition = sawNode.getPosition();
-        const baseScaleX = sawNode.scaleX;
-        const baseScaleY = sawNode.scaleY;
+        const baseScaleX = 1//sawNode.scaleX;
+        const baseScaleY = 1//sawNode.scaleY;
 
         const offsetA = cc.v2(0, -CarPrefab.SAW_HIT_SHAKE_AMPLITUDE);
         const offsetB = cc.v2(0, CarPrefab.SAW_HIT_SHAKE_AMPLITUDE);

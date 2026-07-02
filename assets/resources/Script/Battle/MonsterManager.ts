@@ -8,6 +8,7 @@ import { clamp, distance, randomRange, rectIntersects } from "../Util/MathUtil";
 
 type Rect = { x: number; y: number; width: number; height: number };
 type EliteRangedTarget = { type: "car" | "hero"; carIndex: number; position: cc.Vec2 };
+type MeleeContactTarget = { type: "car"; carContact: { index: number; contactFrontX: number } } | { type: "hero" };
 
 type MonsterFrameCaches = {
     monsterById: Record<number, MonsterRuntime>;
@@ -174,22 +175,22 @@ export default class MonsterManager {
             const monsterRect = this.runtime.getNodeColliderRect(monster.node, GameConfig.monster.width, GameConfig.monster.height);
             const heroContactFrontX = heroRect.x + heroRect.width / 2 - MonsterManager.MONSTER_CAR_CONTACT_SHRINK;
             const reachesHeroFront = monster.node.x - GameConfig.monster.width / 2 <= heroContactFrontX;
-            const carContact = this.callbacks.getContactCarHit(monsterRect, monster.node.y + monster.node.parent.y);
-            const hitsCar = !!carContact;
+            const attackTargetY = monster.node.y + (monster.node.parent ? monster.node.parent.y : 0) + GameConfig.monster.height;
+            const carContact = this.callbacks.getContactCarHit(monsterRect, attackTargetY);
             const hitsHero = heroCanCollide
                 && (rectIntersects(monsterRect, heroRect) || (reachesHeroFront && this.callbacks.rectOverlapsY(monsterRect, heroRect)));
-            const shouldAttackHero = !hitsCar && hitsHero;
+            const meleeContactTarget = this.getMeleeContactTarget(carContact, hitsHero, attackTargetY);
             if (monster.kind === "elite") {
-                if (hitsCar) {
+                if (meleeContactTarget && meleeContactTarget.type === "car") {
                     monster.contactCar = true;
-                    monster.contactCarIndex = carContact.index;
-                    monster.node.x = carContact.contactFrontX + GameConfig.monster.width / 2;
-                } else if (hitsHero) {
+                    monster.contactCarIndex = meleeContactTarget.carContact.index;
+                    monster.node.x = meleeContactTarget.carContact.contactFrontX + GameConfig.monster.width / 2;
+                } else if (meleeContactTarget && meleeContactTarget.type === "hero") {
                     monster.contactHero = true;
                     monster.node.x = heroContactFrontX + GameConfig.monster.width / 2;
                 }
                 this.updateEliteRangedAttack(monster, dt, eliteRangedBaseCarIndex);
-            } else if (shouldAttackHero) {
+            } else if (meleeContactTarget && meleeContactTarget.type === "hero") {
                 monster.contactHero = true;
                 monster.node.x = heroContactFrontX + GameConfig.monster.width / 2;
                 monster.attackTimer += dt;
@@ -198,15 +199,15 @@ export default class MonsterManager {
                     this.runtime.playMonsterAttack(monster.node);
                     this.callbacks.onAttackHero(monster.attack);
                 }
-            } else if (hitsCar) {
+            } else if (meleeContactTarget && meleeContactTarget.type === "car") {
                 monster.contactCar = true;
-                monster.contactCarIndex = carContact.index;
-                monster.node.x = carContact.contactFrontX + GameConfig.monster.width / 2;
+                monster.contactCarIndex = meleeContactTarget.carContact.index;
+                monster.node.x = meleeContactTarget.carContact.contactFrontX + GameConfig.monster.width / 2;
                 monster.attackTimer += dt;
                 if (monster.attackTimer >= GameConfig.monster.attackInterval) {
                     monster.attackTimer = 0;
                     this.runtime.playMonsterAttack(monster.node);
-                    this.callbacks.onAttackCar(monster.attack, monsterRect.y + monsterRect.height*0.5, monster.contactCarIndex);
+                    this.callbacks.onAttackCar(monster.attack, attackTargetY, monster.contactCarIndex);
                 }
             } else if (monster.stackedOnMonsterId > 0) {
                 // monster.attackTimer = 0;
@@ -405,6 +406,30 @@ export default class MonsterManager {
     private addMonsterKnockback(monster: MonsterRuntime, velocityX: number, velocityY: number): void {
         monster.knockbackVelocityX += velocityX;
         monster.knockbackVelocityY += velocityY;
+    }
+
+    private getMeleeContactTarget(
+        carContact: { index: number; contactFrontX: number } | null,
+        hitsHero: boolean,
+        attackTargetY: number,
+    ): MeleeContactTarget | null {
+        if (!carContact && !hitsHero) {
+            return null;
+        }
+        if (!carContact) {
+            return { type: "hero" };
+        }
+        if (!hitsHero) {
+            return { type: "car", carContact };
+        }
+
+        const carPosition = this.runtime.getCarWorldPositionByIndex(carContact.index);
+        const heroPosition = this.runtime.getHeroWorldPosition();
+        const carDistance = Math.abs(carPosition.y - attackTargetY);
+        const heroDistance = Math.abs(heroPosition.y - attackTargetY);
+        return heroDistance <= carDistance
+            ? { type: "hero" }
+            : { type: "car", carContact };
     }
 
     private updateEliteRangedAttack(monster: MonsterRuntime, dt: number, baseCarIndex: number): void {

@@ -51,7 +51,7 @@ export const GameConfig = {
     monster: {
         laneY: MONSTER_LANE_Y,
         attackInterval: 1.5,
-        speed: 50,
+        speed: 100,
         width: 46,
         height: 58,
         slowFactorPerMonster: 0.2,
@@ -73,7 +73,7 @@ export const GameConfig = {
             hp: 800,
             attack: 100,
         },
-        glowRateRound: 1.1,
+        glowRateRound: 1.0,
         battleSpawnPhasesByRound: [
             [
                 { start: 0, end: 10, rate: 0.5 },
@@ -106,7 +106,7 @@ export const GameConfig = {
     boss: {
         x: 5100,
         spawnX: 5200,
-        maxMonsterCount: 40,
+        maxMonsterCount: 30,
         maxVisibleMonsterCount: 18,
         entranceScreenPadding: 160,
         stopScreenOffsetX: 150,
