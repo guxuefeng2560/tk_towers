@@ -136,6 +136,29 @@ export default class GameFlowController {
             return;
         }
 
+        if (!GameConfig.battleQuestion.useEnergySystemForSkillCasting) {
+            const availability = this.battleController.getSkillAvailability(skillType);
+            if (availability.kind === "cooldown") {
+                this.runtime.spawnFloatText(0, 12, "技能冷却中", new cc.Color(255, 220, 110, 255));
+                this.refreshBattleAndResultUi();
+                return;
+            }
+            if (availability.kind === "invalid") {
+                const reason = availability.reason === "roller_unavailable"
+                    ? "技能未解锁"
+                    : availability.reason === "hero_dead"
+                        ? "当前无法释放"
+                        : "当前无法释放";
+                this.runtime.spawnFloatText(0, 12, reason, new cc.Color(255, 220, 110, 255));
+                this.refreshBattleAndResultUi();
+                return;
+            }
+
+            this.enterQuestionPause(skillType, 0);
+            this.refreshBattleAndResultUi();
+            return;
+        }
+
         const cost = skillType === "roller"
             ? GameConfig.skill.roller.cost
             : GameConfig.skill.bomb.cost;
@@ -160,7 +183,9 @@ export default class GameFlowController {
             : GamePhase.Battle;
         this.pendingSkillType = skillType;
         this.pendingSkillCost = cost;
-        this.currentQuestionMode = QuestionMode.BattleEnergyLack;
+        this.currentQuestionMode = GameConfig.battleQuestion.useEnergySystemForSkillCasting && cost > 0
+            ? QuestionMode.BattleEnergyLack
+            : QuestionMode.RetryFixWrong;
         this.currentBattleQuestion = this.questionController.createBattleQuestion(
             this.currentQuestionMode,
             this.battleQuestionIndexInRound,

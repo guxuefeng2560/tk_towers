@@ -5,7 +5,7 @@ import { SkillType } from "../Entity/EntityTypes";
 import { clamp } from "../Util/MathUtil";
 import { BattleViewData } from "../UI/BattleView";
 import CameraFollow from "./CameraFollow";
-import SkillController from "../Skill/SkillController";
+import SkillController, { SkillAvailabilityResult } from "../Skill/SkillController";
 import BulletManager from "./BulletManager";
 import MonsterManager from "./MonsterManager";
 import CarManager from "./CarManager";
@@ -67,7 +67,9 @@ export default class BattleController {
         this.runtime.context.battleTime += dt;
         this.skillController.updateCooldowns(dt);
 
-        this.updateEnergy(dt);
+        if (GameConfig.battleQuestion.useEnergySystemForSkillCasting) {
+            this.updateEnergy(dt);
+        }
         this.monsterManager.updateSpawning(dt);
         this.bulletManager.update(dt);
         this.monsterManager.updateMonsters(dt);
@@ -125,6 +127,31 @@ export default class BattleController {
         );
     }
 
+    public getSkillAvailability(skillType: SkillType): SkillAvailabilityResult {
+        if (this.runtime.context.playerHp <= 0) {
+            return { kind: "invalid", reason: "hero_dead" };
+        }
+        const skillControllerAny = this.skillController as any;
+        if (typeof skillControllerAny.getSkillAvailability === "function") {
+            return skillControllerAny.getSkillAvailability(skillType);
+        }
+
+        if (skillType === "roller") {
+            if (!this.runtime.context.hasAliveCarSkillUnlocked()) {
+                return { kind: "invalid", reason: "roller_unavailable" };
+            }
+            if (this.runtime.rollerCooldown > 0 || this.runtime.rollerHiddenRemaining > 0) {
+                return { kind: "cooldown" };
+            }
+            return { kind: "ready" };
+        }
+
+        if (this.runtime.bombCooldown > 0) {
+            return { kind: "cooldown" };
+        }
+        return { kind: "ready" };
+    }
+
     public enterQuestionPauseVisualState(): void {
         this.stopCarMoveAudio();
         this.runtime.playHeroIdle();
@@ -148,8 +175,8 @@ export default class BattleController {
         return {
             playerHp: this.runtime.context.playerHp,
             playerMaxHp: this.runtime.context.playerMaxHp,
-            energy: this.runtime.context.energy,
-            energyMax: this.runtime.context.energyMax,
+            energy: GameConfig.battleQuestion.useEnergySystemForSkillCasting ? this.runtime.context.energy : 0,
+            energyMax: GameConfig.battleQuestion.useEnergySystemForSkillCasting ? this.runtime.context.energyMax : 0,
             battleProgress: this.getBattleProgress(),
             completedRounds: this.getCompletedRounds(),
             showBattleProgress: this.shouldShowBattleProgress(),

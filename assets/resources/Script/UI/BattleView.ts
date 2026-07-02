@@ -77,6 +77,12 @@ export default class BattleView {
             this.setNodeGroupActive(this.refs.bossProgressBar ? this.refs.bossProgressBar.node.parent : null, false);
             this.setNodeGroupActive(this.refs.bossHpLabel ? this.refs.bossHpLabel.node : null, false);
             this.setNodeGroupActive(this.refs.nodeBattleProgress, false);
+            this.setNodeGroupActive(this.refs.imgEnergyProgress ? this.refs.imgEnergyProgress.node : null, false);
+            this.setNodeGroupActive(this.refs.imgEnergyProgress && this.refs.imgEnergyProgress.node ? this.refs.imgEnergyProgress.node.parent : null, false);
+            this.setNodeGroupActive(this.refs.labelEnergy ? this.refs.labelEnergy.node : null, false);
+            this.setNodeGroupActive(this.refs.labelEnergy && this.refs.labelEnergy.node ? this.refs.labelEnergy.node.parent : null, false);
+            this.setCostVisibleIfChanged(this.refs.labelBombCost, false);
+            this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, false);
             // this.setNodeGroupActive(this.answer1Button, false);
             // this.setNodeGroupActive(this.answer2Button, false);
             // this.setNodeGroupActive(this.answer1LabelNode, false);
@@ -137,22 +143,28 @@ export default class BattleView {
             this.updateBossIcons(data.completedRounds);
         }
 
+        const useEnergySystemForSkillCasting = GameConfig.battleQuestion.useEnergySystemForSkillCasting;
+
         if (this.refs.labelEnergy) {
+            this.setNodeGroupActiveIfChanged(this.refs.labelEnergy.node, useEnergySystemForSkillCasting);
+            this.setNodeGroupActiveIfChanged(this.refs.labelEnergy.node.parent, useEnergySystemForSkillCasting);
             const energyText = `${Math.floor(data.energy)}`;
-            if (!this.lastData || Math.floor(this.lastData.energy) !== Math.floor(data.energy)) {
+            if (useEnergySystemForSkillCasting && (!this.lastData || Math.floor(this.lastData.energy) !== Math.floor(data.energy))) {
                 this.refs.labelEnergy.string = energyText;
             }
         }
 
-        if (this.refs.labelBombCost && !this.lastData) {
+        if (useEnergySystemForSkillCasting && this.refs.labelBombCost && !this.lastData) {
             this.refs.labelBombCost.string = `${GameConfig.skill.bomb.cost}`;
         }
 
-        if (this.refs.labelSawtoothCost && !this.lastData) {
+        if (useEnergySystemForSkillCasting && this.refs.labelSawtoothCost && !this.lastData) {
             this.refs.labelSawtoothCost.string = `${GameConfig.skill.roller.cost}`;
         }
 
         if (this.refs.imgEnergyProgress) {
+            this.setNodeGroupActiveIfChanged(this.refs.imgEnergyProgress.node, useEnergySystemForSkillCasting);
+            this.setNodeGroupActiveIfChanged(this.refs.imgEnergyProgress.node.parent, useEnergySystemForSkillCasting);
             let ratio = 0;
             if (data.energyMax > 0) {
                 if (data.energy >= data.energyMax) {
@@ -161,7 +173,7 @@ export default class BattleView {
                     ratio = data.energy - Math.floor(data.energy);
                 }
             }
-            if (!this.lastData || this.lastData.energy !== data.energy || this.lastData.energyMax !== data.energyMax) {
+            if (useEnergySystemForSkillCasting && (!this.lastData || this.lastData.energy !== data.energy || this.lastData.energyMax !== data.energyMax)) {
                 this.refs.imgEnergyProgress.progress = Math.max(0, Math.min(1, ratio));
             }
         }
@@ -170,8 +182,8 @@ export default class BattleView {
         const sawSkillVisible = data.rollerSkillVisible;
         const rollerEnergyEnough = data.energy >= GameConfig.skill.roller.cost;
         const showSkillSwitch = data.phase !== GamePhase.QuestionPause;
-        const showBombCost = showSkillSwitch && bombEnergyEnough;
-        const showSawtoothCost = showSkillSwitch && sawSkillVisible && rollerEnergyEnough;
+        const showBombCost = useEnergySystemForSkillCasting && showSkillSwitch && bombEnergyEnough;
+        const showSawtoothCost = useEnergySystemForSkillCasting && showSkillSwitch && sawSkillVisible && rollerEnergyEnough;
         this.setCostVisibleIfChanged(this.refs.labelBombCost, showBombCost);
         this.setCostVisibleIfChanged(this.refs.labelSawtoothCost, showSawtoothCost);
         this.setNodeGroupActiveIfChanged(this.answer1Button, true);

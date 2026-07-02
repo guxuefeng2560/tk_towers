@@ -21,7 +21,7 @@ export const GameConfig = {
 
     player: {
         maxHp: 1800,
-        baseAttack: 35,
+        baseAttack: 350,
         attackAddPerLevel: 4,
         shootInterval: 0.9,
         bulletsPerShot: 5,
@@ -177,6 +177,7 @@ export const GameConfig = {
     },
 
     battleQuestion: {
+        useEnergySystemForSkillCasting: false,
         rewardMode: QuestionMode.BattleEnergyLack,
         fillEnoughEnergyForSkill: true,
         autoCastAfterAnswer: false,

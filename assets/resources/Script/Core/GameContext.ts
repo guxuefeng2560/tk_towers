@@ -409,8 +409,12 @@ export class GameContext {
         this.defenseUnlocked = this.getTotalTaskProgress(PrepareTaskKey.UnlockDef) > 0;
         this.playerMaxHp = GameConfig.player.maxHp;
         this.playerAttack = GameConfig.player.baseAttack;// + this.attackLevel * GameConfig.player.attackAddPerLevel;
-        this.energyMax = GameConfig.player.energyMax;
-        this.energyRegen = GameConfig.player.baseEnergyRegen + this.energyRegenLevel * GameConfig.player.energyRegenAddPerLevel;
+        this.energyMax = GameConfig.battleQuestion.useEnergySystemForSkillCasting
+            ? GameConfig.player.energyMax
+            : 0;
+        this.energyRegen = GameConfig.battleQuestion.useEnergySystemForSkillCasting
+            ? GameConfig.player.baseEnergyRegen + this.energyRegenLevel * GameConfig.player.energyRegenAddPerLevel
+            : 0;
         this.sawCarUnlocked = this.sawCarCount > 0;
         for (let index = 0; index < this.sawCarCount; index += 1) {
             this.refreshCarStats(index);
@@ -418,7 +422,9 @@ export class GameContext {
         this.sawCarMaxHp = this.sawCarMaxHpList[0] || GameConfig.sawCar.baseHp;
         this.sawCarAttack = this.sawCarAttackList[0] || GameConfig.sawCar.baseAttack;
         this.playerHp = Math.min(this.playerHp || this.playerMaxHp, this.playerMaxHp);
-        this.energy = Math.min(this.energy || 0, this.energyMax);
+        this.energy = GameConfig.battleQuestion.useEnergySystemForSkillCasting
+            ? Math.min(this.energy || 0, this.energyMax)
+            : 0;
         if (this.sawCarHpList.length > this.sawCarCount) {
             this.sawCarHpList.length = this.sawCarCount;
         }

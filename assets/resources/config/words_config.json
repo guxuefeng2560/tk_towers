@@ -3,61 +3,68 @@
     "id": 1,
     "unit_id": 1,
     "question_type": 1,
-    "prompt": "我是学生。",
+    "prompt": "我学生是。",
+    "right_1": "我是学生。",
     "option_1": "正确",
     "option_2": "错误",
-    "correct_option": 1
+    "correct_option": 2
   },
   {
     "id": 2,
     "unit_id": 1,
     "question_type": 1,
-    "prompt": "我学生是。",
+    "prompt": "我是学生。",
+    "right_1": "我是学生。",
     "option_1": "正确",
     "option_2": "错误",
-    "correct_option": 2
+    "correct_option": 1
   },
   {
     "id": 3,
     "unit_id": 1,
     "question_type": 1,
-    "prompt": "我不是学生。",
+    "prompt": "我是不学生。",
+    "right_1": "我不是学生。",
     "option_1": "正确",
     "option_2": "错误",
-    "correct_option": 1
+    "correct_option": 2
   },
   {
     "id": 4,
     "unit_id": 1,
     "question_type": 1,
-    "prompt": "我是不学生。",
-    "option_1": "正确",
-    "option_2": "错误",
-    "correct_option": 2
-  },
-  {
-    "id": 5,
-    "unit_id": 1,
-    "question_type": 1,
-    "prompt": "同学认识你。",
+    "prompt": "我不是学生。",
+    "right_1": "我不是学生。",
     "option_1": "正确",
     "option_2": "错误",
     "correct_option": 1
   },
   {
-    "id": 6,
+    "id": 5,
     "unit_id": 1,
     "question_type": 1,
     "prompt": "同学你认识。",
+    "right_1": "同学认识你。",
     "option_1": "正确",
     "option_2": "错误",
     "correct_option": 2
+  },
+  {
+    "id": 6,
+    "unit_id": 1,
+    "question_type": 1,
+    "prompt": "同学认识你。",
+    "right_1": "同学认识你。",
+    "option_1": "正确",
+    "option_2": "错误",
+    "correct_option": 1
   },
   {
     "id": 7,
     "unit_id": 1,
     "question_type": 2,
     "prompt": "我{  }学生。",
+    "right_1": "我是学生。",
     "option_1": "是",
     "option_2": "叫",
     "correct_option": 1
@@ -67,6 +74,7 @@
     "unit_id": 1,
     "question_type": 2,
     "prompt": "我{  }老师。",
+    "right_1": "我是老师。",
     "option_1": "是",
     "option_2": "叫",
     "correct_option": 1
@@ -76,6 +84,7 @@
     "unit_id": 1,
     "question_type": 2,
     "prompt": "请问，你{  }什么名字？",
+    "right_1": "请问，你叫什么名字？",
     "option_1": "是",
     "option_2": "叫",
     "correct_option": 2
@@ -84,16 +93,18 @@
     "id": 10,
     "unit_id": 1,
     "question_type": 2,
-    "prompt": "我叫李文，你{  }什么名字？",
-    "option_1": "叫",
-    "option_2": "是",
+    "prompt": "我叫李文，{  }叫什么名字？",
+    "right_1": "我叫李文，你叫什么名字？",
+    "option_1": "你",
+    "option_2": "我",
     "correct_option": 1
   },
   {
     "id": 11,
     "unit_id": 1,
     "question_type": 2,
-    "prompt": "大家{   }老师。",
+    "prompt": "大家{  }老师。",
+    "right_1": "大家谢谢老师。",
     "option_1": "谢谢",
     "option_2": "再见",
     "correct_option": 1
@@ -102,7 +113,8 @@
     "id": 12,
     "unit_id": 1,
     "question_type": 2,
-    "prompt": "你{   }李文。",
+    "prompt": "你{  }李文。",
+    "right_1": "你认识李文。",
     "option_1": "高兴",
     "option_2": "认识",
     "correct_option": 2
@@ -112,6 +124,7 @@
     "unit_id": 1,
     "question_type": 3,
     "prompt": "请问，你{      }名字？",
+    "right_1": "请问，你叫什么名字？",
     "option_1": "叫什么",
     "option_2": "什么叫",
     "option_3": "是什么",
@@ -121,7 +134,8 @@
     "id": 14,
     "unit_id": 1,
     "question_type": 3,
-    "prompt": "我{      }。",
+    "prompt": "我{   }。",
+    "right_1": "我是老师。",
     "option_1": "是老师",
     "option_2": "老师是",
     "option_3": "老师",
@@ -131,7 +145,8 @@
     "id": 15,
     "unit_id": 1,
     "question_type": 3,
-    "prompt": "{      }李文。",
+    "prompt": "{       }李文。",
+    "right_1": "我认识李文。",
     "option_1": "我认识",
     "option_2": "认识我",
     "option_3": "我",
@@ -141,7 +156,9 @@
     "id": 16,
     "unit_id": 1,
     "question_type": 3,
-    "prompt": "问：你叫什么名字？\n答：_________________",
+    "prompt": "问：你叫什么名字？\\n答：_________________",
+    "right_1": "你叫什么名字？",
+    "right_2": "我叫李文",
     "option_1": "我叫李文",
     "option_2": "我李文叫",
     "option_3": "李文叫我",
@@ -151,7 +168,9 @@
     "id": 17,
     "unit_id": 1,
     "question_type": 3,
-    "prompt": "问：你叫什么名字？\n答：_________________",
+    "prompt": "问：你叫什么名字？\\n答：_________________",
+    "right_1": "你叫什么名字？",
+    "right_2": "我叫李文。",
     "option_1": "我叫李文。",
     "option_2": "我不叫李文。",
     "option_3": "我是老师。",
@@ -161,7 +180,9 @@
     "id": 18,
     "unit_id": 1,
     "question_type": 3,
-    "prompt": "问：你是谁？\n答：_________________",
+    "prompt": "问：你叫什么名字？\\n答：_________________",
+    "right_1": "你叫什么名字？",
+    "right_2": "我是李文。",
     "option_1": "我是李文。",
     "option_2": "我是老师。",
     "option_3": "我是同学。",
@@ -171,11 +192,10 @@
     "id": 19,
     "unit_id": 1,
     "question_type": 4,
-    "prompt": "左右两侧的语句进行正确的配对",
     "match_left_1": "你叫",
     "match_left_2": "我是",
     "match_left_3": "我",
-    "match_right_1": "什么名字？",
+    "match_right_1": "什么名字?",
     "match_right_2": "老师。",
     "match_right_3": "认识李文。"
   },
@@ -183,7 +203,6 @@
     "id": 20,
     "unit_id": 1,
     "question_type": 4,
-    "prompt": "左右两侧的语句进行正确的配对",
     "match_left_1": "我不叫",
     "match_left_2": "我不是",
     "match_left_3": "我",
@@ -195,42 +214,42 @@
     "id": 21,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
+    "right_1": "我是学生。",
     "sort_sentence": "我|是|学生。"
   },
   {
     "id": 22,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
+    "right_1": "你也是老师。",
     "sort_sentence": "你|也|是|老师。"
   },
   {
     "id": 23,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
+    "right_1": "大家谢谢老师。",
     "sort_sentence": "大家|谢谢|老师。"
   },
   {
     "id": 24,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
+    "right_1": "我认识同学。",
     "sort_sentence": "我|认识|同学。"
   },
   {
     "id": 25,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
+    "right_1": "你们认识老师。",
     "sort_sentence": "你们|认识|老师。"
   },
   {
     "id": 26,
     "unit_id": 1,
     "question_type": 5,
-    "prompt": "请把词语按正确顺序排列成句子。",
-    "sort_sentence": "你|叫|什么|名字？"
+    "right_1": "你叫什么名字。",
+    "sort_sentence": "你|叫|什么|名字。"
   }
 ]

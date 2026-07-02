@@ -11,6 +11,11 @@ export type SkillAttemptResult =
     | { kind: "cooldown" }
     | { kind: "invalid"; reason: string };
 
+export type SkillAvailabilityResult =
+    | { kind: "ready" }
+    | { kind: "cooldown" }
+    | { kind: "invalid"; reason: string };
+
 export default class SkillController {
     private static readonly BOMB_EFFECT_ANIMATION = "animation";
 
@@ -79,6 +84,23 @@ export default class SkillController {
         }
         this.castBomb(onBombHit);
         return { kind: "used" };
+    }
+
+    public getSkillAvailability(skillType: SkillType): SkillAvailabilityResult {
+        if (skillType === "roller") {
+            if (!this.runtime.context.hasAliveCarSkillUnlocked()) {
+                return { kind: "invalid", reason: "roller_unavailable" };
+            }
+            if (this.runtime.rollerCooldown > 0 || this.runtime.rollerHiddenRemaining > 0) {
+                return { kind: "cooldown" };
+            }
+            return { kind: "ready" };
+        }
+
+        if (this.runtime.bombCooldown > 0) {
+            return { kind: "cooldown" };
+        }
+        return { kind: "ready" };
     }
 
     public useSkillWithoutEnergyCost(skillType: SkillType, onBombHit: (monsterId: number, damage: number, center: cc.Vec2) => void): boolean {
