@@ -121,9 +121,13 @@ export default class PrepareView {
         if (this.refs.powerBar) {
             this.refs.powerBar.node.active = false;
         }
+        if (this.refs.nodeBattleProgress) {
+            this.refs.nodeBattleProgress.active = false;
+        }
     }
 
     public render(data: PrepareViewData, onTaskVisibilitySettled?: () => void): void {
+        const shouldShowStartState = this.active && data.showStartButton;
         const showPrepareLayout = this.active && !data.showStartButton;
         if (this.root) {
             this.root.active = showPrepareLayout;
@@ -180,7 +184,7 @@ export default class PrepareView {
         }
         if (this.answerCompleteTips) {
             let activeState = this.answerCompleteTips.active;
-            this.answerCompleteTips.active = this.active && data.showStartButton;
+            this.answerCompleteTips.active = shouldShowStartState;
             this.answerCompleteTips.opacity = data.showStartButton ? 255 : 0;
             if (this.answerCompleteTips.active) {
                 if (!activeState) {
@@ -192,9 +196,7 @@ export default class PrepareView {
                 this.stopNodeBreathing(this.answerCompleteTips);
             }
         }
-        if (this.refs.powerBar) {
-            this.refs.powerBar.node.active = this.active;
-        }
+        this.syncPrepareSummaryVisibility(shouldShowStartState);
     }
 
     public playShowAction(node: cc.Node, callBack: Function) {
@@ -563,5 +565,14 @@ export default class PrepareView {
 
         const size = cc.winSize;
         buttonNode.setPosition(size.width / 2 - 110, -size.height / 2 + 56);
+    }
+
+    private syncPrepareSummaryVisibility(showStartState: boolean): void {
+        if (this.refs.powerBar) {
+            this.refs.powerBar.node.active = this.active && !showStartState;
+        }
+        if (this.refs.nodeBattleProgress) {
+            this.refs.nodeBattleProgress.active = showStartState;
+        }
     }
 }

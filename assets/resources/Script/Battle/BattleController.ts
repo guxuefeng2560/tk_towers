@@ -244,7 +244,7 @@ export default class BattleController {
         this.runtime.context.playerHp = Math.max(0, this.runtime.context.playerHp - damage);
         const heroPosition = this.runtime.getHeroWorldPosition();
         this.runtime.spawnFloatText(heroPosition.x, heroPosition.y + 60, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
-        AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
+        // AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
     }
 
     private getIncomingDamage(baseDamage: number, carIndex?: number): number {

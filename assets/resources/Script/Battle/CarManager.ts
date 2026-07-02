@@ -151,7 +151,7 @@ export default class CarManager {
         const damage = this.getIncomingDamage(baseDamage, targetCarIndex);
         const carPosition = this.runtime.getCarWorldPositionByIndex(targetCarIndex);
         this.runtime.spawnFloatText(carPosition.x, carPosition.y + 45, `-${Math.ceil(damage)}`, new cc.Color(255, 96, 96, 255));
-        AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
+        // AudioManager.getInstance().playSFXThrottled(AudioID.AudioID_enemy_attack, 0.15);
         const damageResult = this.runtime.context.damageCar(targetCarIndex, damage);
         this.runtime.playCarShieldHitEffect(targetCarIndex);
         if (damageResult.destroyed) {
