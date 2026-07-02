@@ -54,6 +54,7 @@ export const GameConfig = {
         speed: 100,
         width: 46,
         height: 58,
+        maxPerLaneBeforeRedirect: 12,
         slowFactorPerMonster: 0.2,
         normal: {
             hp: 160,

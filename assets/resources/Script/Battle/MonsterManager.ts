@@ -55,7 +55,7 @@ export default class MonsterManager {
     private static readonly MONSTER_STACK_JUMP_CHANCE = 0.5;
     private static readonly MONSTER_STACK_JUMP_DURATION = 0.8;
     private static readonly MONSTER_STACK_JUMP_ARC_HEIGHT = 22;
-    private static readonly MONSTER_STACK_Y_OFFSET = 46;
+    private static readonly MONSTER_STACK_Y_OFFSET = 26;
     private static readonly MONSTER_STACK_FALL_SPEED = 280;
 
     // ===== 怪物击退 =====
@@ -347,13 +347,12 @@ export default class MonsterManager {
 
         const node = this.runtime.poolManager.get("monster", monsterRoot, () => this.runtime.createMonsterNode());
         this.runtime.configureMonsterNode(node, kind);
-        const laneIndex = localY === undefined
+        const preferredLaneIndex = localY === undefined
             ? this.getRandomMonsterLaneIndex()
             : this.getMonsterLaneIndexByY(localY);
+        const laneIndex = this.getSpawnMonsterLaneIndex(preferredLaneIndex);
         node.x = localX;
-        node.y = localY === undefined
-            ? this.getMonsterLaneY(laneIndex)
-            : this.getMonsterLaneY(laneIndex);
+        node.y = this.getMonsterLaneY(laneIndex);
         node.zIndex = Math.round(-node.y * 10);
         node.opacity = 255;
 
@@ -726,6 +725,54 @@ export default class MonsterManager {
         return Math.floor(Math.random() * MonsterManager.MONSTER_LANE_OFFSETS.length);
     }
 
+    private getSpawnMonsterLaneIndex(preferredLaneIndex: number): number {
+        const laneCount = MonsterManager.MONSTER_LANE_OFFSETS.length;
+        const normalizedPreferredLaneIndex = Math.max(0, Math.min(laneCount - 1, preferredLaneIndex));
+        const maxPerLane = GameConfig.monster.maxPerLaneBeforeRedirect;
+        if (maxPerLane <= 0) {
+            return normalizedPreferredLaneIndex;
+        }
+
+        const laneCounts = this.getAliveMonsterCountByLane();
+        if ((laneCounts[normalizedPreferredLaneIndex] || 0) < maxPerLane) {
+            return normalizedPreferredLaneIndex;
+        }
+
+        const alternateLaneIndices = Array.from({ length: laneCount }, (_, laneIndex) => laneIndex)
+            .filter((laneIndex) => laneIndex !== normalizedPreferredLaneIndex);
+        const availableAlternateLaneIndices = alternateLaneIndices
+            .filter((laneIndex) => (laneCounts[laneIndex] || 0) < maxPerLane);
+        const candidateLaneIndices = availableAlternateLaneIndices.length > 0
+            ? availableAlternateLaneIndices
+            : alternateLaneIndices;
+
+        let selectedLaneIndex = normalizedPreferredLaneIndex;
+        let selectedLaneCount = laneCounts[normalizedPreferredLaneIndex] || 0;
+        candidateLaneIndices.forEach((laneIndex) => {
+            const laneCountForIndex = laneCounts[laneIndex] || 0;
+            if (laneCountForIndex < selectedLaneCount) {
+                selectedLaneIndex = laneIndex;
+                selectedLaneCount = laneCountForIndex;
+            }
+        });
+
+        return selectedLaneIndex;
+    }
+
+    private getAliveMonsterCountByLane(): number[] {
+        const laneCounts = Array.from({ length: MonsterManager.MONSTER_LANE_OFFSETS.length }, () => 0);
+        this.runtime.monsters.forEach((monster) => {
+            if (!cc.isValid(monster.node) || monster.dying) {
+                return;
+            }
+            if (monster.laneIndex < 0 || monster.laneIndex >= laneCounts.length) {
+                return;
+            }
+            laneCounts[monster.laneIndex] += 1;
+        });
+        return laneCounts;
+    }
+
     private getMonsterLaneIndexByY(y: number): number {
         let nearestIndex = 0;
         let nearestDistance = Number.MAX_SAFE_INTEGER;
@@ -797,7 +844,9 @@ export default class MonsterManager {
                     monster.stackJumpProgress = 1;
                     return;
                 }
-                const targetY = supportMonster.node.y + MonsterManager.MONSTER_STACK_Y_OFFSET;
+                // Keep stack height anchored to the lane baseline so knockback or transient Y motion
+                // on the support monster does not keep lifting newly stacked monsters higher and higher.
+                const targetY = this.getMonsterStackTargetY(monster, caches.monsterById, caches.stackDepthById);
                 if (this.isMonsterJumping(monster)) {
                     const nextProgress = clamp(
                         monster.stackJumpProgress + dt / MonsterManager.MONSTER_STACK_JUMP_DURATION,
@@ -885,6 +934,16 @@ export default class MonsterManager {
         const depth = this.getMonsterStackDepth(supportMonster, monsterById, cache, visited) + 1;
         cache[monster.id] = depth;
         return depth;
+    }
+
+    private getMonsterStackTargetY(
+        monster: Pick<MonsterRuntime, "id" | "laneIndex" | "stackedOnMonsterId">,
+        monsterById: Record<number, MonsterRuntime>,
+        stackDepthById: Record<number, number>,
+    ): number {
+        const laneY = this.getMonsterLaneY(monster.laneIndex);
+        const depth = Math.max(1, this.getMonsterStackDepth(monster, monsterById, stackDepthById));
+        return laneY + depth * MonsterManager.MONSTER_STACK_Y_OFFSET;
     }
 
     private isMonsterElevated(monster: Pick<MonsterRuntime, "laneIndex" | "node" | "stackedOnMonsterId">): boolean {
